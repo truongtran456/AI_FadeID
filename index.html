@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GỌI TÊN SIÊU CẤP AI - Cyberpunk Edition</title>
+    
+    <!-- Load CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Load face-api.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ GỌI TÊN SIÊU CẤP AI ⚡</h1>
+    </div>
+
+    <div class="status" id="status">Đang khởi động AI...</div>
+
+    <!-- Camera Full màn hình -->
+    <div class="camera-section-full">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="button-container">
+        <!-- Điều chỉnh thời gian quét -->
+        <div class="time-control">
+            <label for="scanDuration">⏱️ Thời gian quét: <span id="durationValue">3</span>s</label>
+            <input type="range" id="scanDuration" min="1" max="10" value="3" step="1">
+        </div>
+        
+        <button id="startButton" disabled>BẮT ĐẦU QUÉT</button>
+        
+        <!-- Thanh thời gian quét ngang -->
+        <div class="scan-timer-horizontal" id="scanTimerHorizontal">
+            <div class="scan-timer-fill-horizontal" id="scanTimerFillHorizontal"></div>
+        </div>
+
+        <!-- Chọn Camera - Bên phải nút quét -->
+        <div class="camera-selector">
+            <label for="cameraSelect">📹 Camera:</label>
+            <select id="cameraSelect">
+                <option value="">Đang tải...</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Màn hình zoom kết quả -->
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-content">
+            <div class="result-title">••• BIOMETRIC RESULT •••</div>
+            <img id="resultImageLarge" class="result-image-large" alt="Kết quả">
+            <div class="result-buttons">
+                <button class="btn-celebrate" id="btnCelebrate">CHÚC MỪNG!</button>
+                <button class="btn-continue" id="btnContinue">TIẾP TỤC QUÉT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>

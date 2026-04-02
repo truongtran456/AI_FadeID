@@ -1,0 +1,416 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #000 0%, #0a0a1a 50%, #000 100%);
+    color: #0ff;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+}
+
+/* Header với hiệu ứng Cyberpunk */
+.header {
+    text-align: center;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.8) 100%);
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    box-shadow: 0 0 20px #0ff, inset 0 0 15px rgba(0, 255, 255, 0.2);
+    margin-bottom: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.header h1 {
+    font-size: 1.6em;
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+    letter-spacing: 3px;
+    animation: glowPulse 2s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+    font-weight: bold;
+}
+
+@keyframes glowPulse {
+    0%, 100% { 
+        text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 45px #0ff;
+        transform: scale(1.01);
+    }
+}
+
+/* Container chính - XÓA ĐI vì giờ full màn hình */
+
+/* Camera Full màn hình */
+.camera-section-full {
+    flex: 1;
+    position: relative;
+    border: 2px solid #f00;
+    box-shadow: 0 0 15px #f00, inset 0 0 15px rgba(255, 0, 0, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    margin: 6px 8px;
+}
+
+/* Chọn Camera - Trong button container */
+.camera-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.camera-selector label {
+    color: #0ff;
+    font-size: 0.9em;
+    font-weight: bold;
+    text-shadow: 0 0 8px #0ff;
+    white-space: nowrap;
+}
+
+#cameraSelect {
+    padding: 8px 12px;
+    font-size: 0.95em;
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #000 0%, #111 100%);
+    color: #0ff;
+    border: 2px solid #0ff;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+    outline: none;
+    min-width: 150px;
+}
+
+#cameraSelect:hover {
+    background: linear-gradient(135deg, #111 0%, #222 100%);
+    box-shadow: 0 0 12px #0ff;
+}
+
+#cameraSelect option {
+    background: #000;
+    color: #0ff;
+    padding: 8px;
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: contrast(1.15) brightness(1.05) saturate(1.1);
+}
+
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Khung kết quả bên phải - XÓA ĐI */
+/* Không cần nữa vì giờ full màn hình */
+
+/* Nút bấm và thanh thời gian */
+.button-container {
+    padding: 8px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.8) 100%);
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+/* Điều chỉnh thời gian quét */
+.time-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.time-control label {
+    color: #0ff;
+    font-size: 0.9em;
+    text-shadow: 0 0 8px #0ff;
+    font-weight: bold;
+}
+
+#durationValue {
+    color: #0f0;
+    font-weight: bold;
+    font-size: 1.1em;
+    text-shadow: 0 0 8px #0f0, 0 0 15px #0f0;
+}
+
+/* Slider tùy chỉnh */
+#scanDuration {
+    width: 160px;
+    height: 7px;
+    background: linear-gradient(90deg, #0ff 0%, #0f0 100%);
+    border-radius: 5px;
+    outline: none;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+#scanDuration:hover {
+    opacity: 1;
+    box-shadow: 0 0 12px #0ff;
+}
+
+#scanDuration::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #0ff;
+    border: 2px solid #000;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px #0ff, 0 0 15px #0ff;
+}
+
+#scanDuration::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #0ff;
+    border: 2px solid #000;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px #0ff, 0 0 15px #0ff;
+}
+
+#startButton {
+    padding: 10px 35px;
+    font-size: 1.15em;
+    font-weight: bold;
+    color: #000;
+    background: linear-gradient(135deg, #0ff 0%, #00ffaa 100%);
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    cursor: pointer;
+    text-shadow: none;
+    box-shadow: 0 0 15px #0ff, 0 0 25px #0ff;
+    transition: all 0.3s;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+#startButton:hover:not(:disabled) {
+    background: linear-gradient(135deg, #00ffaa 0%, #0ff 100%);
+    box-shadow: 0 0 30px #0ff, 0 0 50px #0ff;
+    transform: scale(1.05) translateY(-2px);
+}
+
+#startButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Thanh thời gian quét ngang */
+.scan-timer-horizontal {
+    width: 220px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid #0ff;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    display: none;
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+}
+
+.scan-timer-fill-horizontal {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #0ff 0%, #0f0 50%, #ff0 100%);
+    box-shadow: 0 0 20px #0ff, 0 0 30px #0ff;
+    transition: width 0.1s linear;
+    animation: scanPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes scanPulse {
+    0%, 100% { box-shadow: 0 0 20px #0ff, 0 0 30px #0ff; }
+    50% { box-shadow: 0 0 30px #0ff, 0 0 50px #0ff, 0 0 70px #0ff; }
+}
+
+/* Status message */
+.status {
+    text-align: center;
+    padding: 5px;
+    color: #f00;
+    text-shadow: 0 0 10px #f00;
+    font-size: 0.95em;
+    min-height: 25px;
+    font-weight: bold;
+}
+
+/* Loading animation */
+.loading {
+    color: #0ff;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0.3; }
+}
+
+/* Màn hình zoom kết quả */
+.result-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(0, 20, 40, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.result-content {
+    text-align: center;
+    animation: zoomIn 0.5s ease-out;
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.result-title {
+    color: #0ff;
+    font-size: 2em;
+    text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 45px #0ff;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+    font-weight: bold;
+    animation: titlePulse 2s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+    0%, 100% { 
+        text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 45px #0ff;
+    }
+    50% { 
+        text-shadow: 0 0 25px #0ff, 0 0 50px #0ff, 0 0 75px #0ff;
+    }
+}
+
+.result-image-large {
+    max-width: 480px;
+    max-height: 380px;
+    border: 4px solid #0f0;
+    box-shadow: 0 0 25px #0f0, 0 0 50px #0f0, 0 0 75px rgba(0, 255, 0, 0.5);
+    border-radius: 12px;
+    margin-bottom: 25px;
+    animation: zoomInImage 0.6s ease-out;
+}
+
+@keyframes zoomInImage {
+    from {
+        opacity: 0;
+        transform: scale(0.7) rotate(-5deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.result-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.btn-celebrate {
+    padding: 13px 38px;
+    font-size: 1.25em;
+    font-weight: bold;
+    color: #000;
+    background: linear-gradient(135deg, #0f0 0%, #00ff88 100%);
+    border: 3px solid #0f0;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 20px #0f0, 0 0 35px #0f0;
+    transition: all 0.3s;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.btn-celebrate:hover {
+    background: linear-gradient(135deg, #00ff88 0%, #0f0 100%);
+    box-shadow: 0 0 30px #0f0, 0 0 50px #0f0;
+    transform: scale(1.05) translateY(-2px);
+}
+
+.btn-continue {
+    padding: 13px 38px;
+    font-size: 1.25em;
+    font-weight: bold;
+    color: #000;
+    background: linear-gradient(135deg, #0ff 0%, #00aaff 100%);
+    border: 3px solid #0ff;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 20px #0ff, 0 0 35px #0ff;
+    transition: all 0.3s;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.btn-continue:hover {
+    background: linear-gradient(135deg, #00aaff 0%, #0ff 100%);
+    box-shadow: 0 0 30px #0ff, 0 0 50px #0ff;
+    transform: scale(1.05) translateY(-2px);
+}
+
+
