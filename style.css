@@ -177,7 +177,7 @@ body {
 }
 
 /* Slider tùy chỉnh */
-#scanDuration {
+#scanDuration, #zoomRange {
     width: 160px;
     height: 7px;
     background: linear-gradient(90deg, #0ff 0%, #0f0 100%);
@@ -189,12 +189,12 @@ body {
     box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
-#scanDuration:hover {
+#scanDuration:hover, #zoomRange:hover {
     opacity: 1;
     box-shadow: 0 0 12px #0ff;
 }
 
-#scanDuration::-webkit-slider-thumb {
+#scanDuration::-webkit-slider-thumb, #zoomRange::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 18px;
@@ -206,7 +206,7 @@ body {
     box-shadow: 0 0 8px #0ff, 0 0 15px #0ff;
 }
 
-#scanDuration::-moz-range-thumb {
+#scanDuration::-moz-range-thumb, #zoomRange::-moz-range-thumb {
     width: 18px;
     height: 18px;
     background: #0ff;

@@ -13,6 +13,8 @@ const btnCelebrate = document.getElementById('btnCelebrate');
 const btnContinue = document.getElementById('btnContinue');
 const scanDurationSlider = document.getElementById('scanDuration');
 const durationValue = document.getElementById('durationValue');
+const zoomRange = document.getElementById('zoomRange');
+const zoomValue = document.getElementById('zoomValue');
 
 let detections = [];
 let isScanning = false;
@@ -21,6 +23,7 @@ let animationFrameId = null;
 let selectedDeviceId = null;
 let scanDuration = 3000;
 let availableCameras = [];
+let currentZoom = 1.0; // Mức zoom hiện tại
 
 // ===== ÂM THANH (lazy-init để tránh bị block trên iOS) =====
 let audioContext = null;
@@ -314,33 +317,42 @@ function expandBoundingBox(box, canvasWidth, canvasHeight) {
 // ===== MULTI-SCALE DETECTION: Bắt khuôn mặt nhỏ ở xa =====
 // Vẽ video lên canvas tạm với scale khác nhau rồi chạy detection
 async function detectAtScale(sourceVideo, scale) {
-    const w = Math.round(sourceVideo.videoWidth * scale);
-    const h = Math.round(sourceVideo.videoHeight * scale);
+    const vw = sourceVideo.videoWidth;
+    const vh = sourceVideo.videoHeight;
+
+    // Tính vùng nhìn thấy sau khi CSS zoom (crop vào giữa)
+    const visibleW = vw / currentZoom;
+    const visibleH = vh / currentZoom;
+    const offsetX = (vw - visibleW) / 2;
+    const offsetY = (vh - visibleH) / 2;
+
+    const w = Math.round(visibleW * scale);
+    const h = Math.round(visibleH * scale);
 
     const offscreen = document.createElement('canvas');
     offscreen.width = w;
     offscreen.height = h;
     const offCtx = offscreen.getContext('2d');
 
-    // Tăng contrast/brightness để AI nhìn rõ hơn ở scale nhỏ
     offCtx.filter = 'contrast(1.3) brightness(1.1)';
-    offCtx.drawImage(sourceVideo, 0, 0, w, h);
+    // Chỉ vẽ vùng đang nhìn thấy (sau zoom)
+    offCtx.drawImage(sourceVideo, offsetX, offsetY, visibleW, visibleH, 0, 0, w, h);
 
     const options = new faceapi.SsdMobilenetv1Options({
-        minConfidence: 0.25, // Thấp hơn để bắt mặt xa mờ
+        minConfidence: 0.25,
         maxResults: 50
     });
 
     const results = await faceapi.detectAllFaces(offscreen, options);
 
-    // Chuyển tọa độ về scale gốc
+    // Chuyển tọa độ về không gian video gốc
     return results.map(det => {
         const b = det.box;
         return {
             score: det.score,
             box: {
-                x: b.x / scale,
-                y: b.y / scale,
+                x: (b.x / scale) + offsetX,
+                y: (b.y / scale) + offsetY,
                 width: b.width / scale,
                 height: b.height / scale
             }
@@ -647,6 +659,38 @@ scanDurationSlider.addEventListener('input', (e) => {
     scanDuration = value * 1000;
     durationValue.textContent = value;
 });
+
+// ===== SLIDER ZOOM =====
+zoomRange.addEventListener('input', async (e) => {
+    currentZoom = parseFloat(e.target.value);
+    zoomValue.textContent = currentZoom.toFixed(1);
+    await applyZoom(currentZoom);
+});
+
+async function applyZoom(zoom) {
+    if (!video.srcObject) return;
+    const track = video.srcObject.getVideoTracks()[0];
+    if (!track) return;
+
+    // Thử hardware zoom trước (Android Chrome, một số webcam USB)
+    try {
+        const caps = track.getCapabilities();
+        if (caps.zoom) {
+            const minZ = caps.zoom.min;
+            const maxZ = caps.zoom.max;
+            const clampedZoom = Math.min(maxZ, Math.max(minZ, zoom));
+            await track.applyConstraints({ advanced: [{ zoom: clampedZoom }] });
+            // Hardware zoom thành công: reset CSS transform
+            video.style.transform = 'scale(1)';
+            video.style.transformOrigin = 'center center';
+            return;
+        }
+    } catch (e) { /* hardware zoom không hỗ trợ, dùng CSS */ }
+
+    // Fallback: CSS transform zoom (mọi thiết bị đều hỗ trợ)
+    video.style.transform = `scale(${zoom})`;
+    video.style.transformOrigin = 'center center';
+}
 
 // ===== NÚT BẮT ĐẦU QUÉT =====
 startButton.addEventListener('click', startRandomSelection);
