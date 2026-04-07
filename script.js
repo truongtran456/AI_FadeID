@@ -1,4 +1,4 @@
-// ===== BIẾN TOÀN CỤC =====
+// ===== DOM ELEMENTS =====
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -14,547 +14,329 @@ const btnContinue = document.getElementById('btnContinue');
 const scanDurationSlider = document.getElementById('scanDuration');
 const durationValue = document.getElementById('durationValue');
 
+// ===== STATE =====
 let detections = [];
 let isScanning = false;
 let modelsLoaded = false;
 let animationFrameId = null;
 let selectedDeviceId = null;
 let scanDuration = 3000;
-let availableCameras = [];
 
-// ===== ÂM THANH (lazy-init để tránh bị block trên iOS) =====
-let audioContext = null;
-let suspenseMusicNodes = []; // Lưu nodes nhạc hồi hộp để stop được
+// ===== AUDIO =====
+let audioCtx = null;
+let suspenseNodes = [];
 
-function getAudioContext() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || (window).webkitAudioContext)();
-    }
-    if (audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-    return audioContext;
-}
-
-// ===== NHẠC HỒI HỘP (khi bắt đầu quét) =====
-// Melody: "ù ú u ù ù ụ" kiểu trống hồi hộp tăng dần
-function startSuspenseMusic(duration) {
-    try {
-        const ac = getAudioContext();
-        suspenseMusicNodes = [];
-
-        const baseNotes = [130, 146, 130, 146, 155, 130, 146, 155, 164, 174];
-        const durationSec = duration / 1000;
-        let t = ac.currentTime + 0.05;
-        let beatIdx = 0;
-
-        while (t < ac.currentTime + durationSec) {
-            const progress = (t - ac.currentTime) / durationSec;
-            // Tốc độ tăng dần: 4 beats/s → 14 beats/s
-            const bps = 4 + progress * 10;
-            const beatLen = 1 / bps;
-
-            const freq = baseNotes[beatIdx % baseNotes.length] * (1 + progress * 0.4);
-            const vol = 0.12 + progress * 0.22;
-
-            const osc = ac.createOscillator();
-            const gain = ac.createGain();
-            osc.connect(gain);
-            gain.connect(ac.destination);
-            osc.type = beatIdx % 3 === 0 ? 'sawtooth' : 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(vol, t + 0.015);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + beatLen * 0.75);
-            osc.start(t);
-            osc.stop(t + beatLen);
-            suspenseMusicNodes.push(osc);
-
-            // Drum kick mỗi 2 beats
-            if (beatIdx % 2 === 0) {
-                const bufSize = Math.floor(ac.sampleRate * 0.08);
-                const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
-                const data = buf.getChannelData(0);
-                for (let j = 0; j < bufSize; j++) {
-                    data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.12));
-                }
-                const src = ac.createBufferSource();
-                src.buffer = buf;
-                const kg = ac.createGain();
-                kg.gain.setValueAtTime(0.18 + progress * 0.25, t);
-                kg.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-                src.connect(kg);
-                kg.connect(ac.destination);
-                src.start(t);
-                suspenseMusicNodes.push(src);
-            }
-
-            t += beatLen;
-            beatIdx++;
-        }
-    } catch (e) { console.warn('Audio error:', e); }
-}
-
-function stopSuspenseMusic() {
-    suspenseMusicNodes.forEach(node => {
-        try { node.stop(); } catch (e) {}
-    });
-    suspenseMusicNodes = [];
-}
-
-// ===== ÂM THANH VUI NHỘN KHI RA KẾT QUẢ =====
-// Kiểu kèn "ta-daaaa!" hài hước
-function playFanfare() {
-    try {
-        const ac = getAudioContext();
-
-        // Melody ta-da: Sol Sol Sol Mi-b (kiểu kèn thắng)
-        const notes = [
-            { freq: 392, dur: 0.12, start: 0.0 },   // Sol
-            { freq: 392, dur: 0.12, start: 0.13 },   // Sol
-            { freq: 392, dur: 0.12, start: 0.26 },   // Sol
-            { freq: 311, dur: 0.35, start: 0.39 },   // Mi-b (bất ngờ hài)
-            { freq: 392, dur: 0.5,  start: 0.76 },   // Sol (kéo dài)
-        ];
-
-        notes.forEach(n => {
-            const osc = ac.createOscillator();
-            const gain = ac.createGain();
-            osc.connect(gain);
-            gain.connect(ac.destination);
-
-            osc.type = 'square'; // Âm kèn
-            osc.frequency.value = n.freq;
-
-            const t = ac.currentTime + n.start;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.35, t + 0.02);
-            gain.gain.setValueAtTime(0.35, t + n.dur - 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + n.dur);
-
-            osc.start(t);
-            osc.stop(t + n.dur + 0.05);
-        });
-
-        // Thêm tiếng "wahwah" hài hước phía sau
-        setTimeout(() => {
-            try {
-                const wahNotes = [523, 494, 466, 440, 415]; // Đi xuống kiểu buồn cười
-                wahNotes.forEach((freq, i) => {
-                    const osc = ac.createOscillator();
-                    const gain = ac.createGain();
-                    osc.connect(gain);
-                    gain.connect(ac.destination);
-                    osc.type = 'sawtooth';
-                    osc.frequency.value = freq;
-                    const t = ac.currentTime + i * 0.1;
-                    gain.gain.setValueAtTime(0.2, t);
-                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-                    osc.start(t);
-                    osc.stop(t + 0.2);
-                });
-            } catch (e) {}
-        }, 1400);
-
-    } catch (e) { console.warn('Audio error:', e); }
+function getAC() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
 }
 
 function playBeep() {
     try {
-        const ac = getAudioContext();
-        const osc = ac.createOscillator();
-        const gain = ac.createGain();
-        osc.connect(gain);
-        gain.connect(ac.destination);
-        osc.frequency.value = 800;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.3, ac.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.1);
-        osc.start(ac.currentTime);
-        osc.stop(ac.currentTime + 0.1);
-    } catch (e) { }
+        const ac = getAC();
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.frequency.value = 880; o.type = 'sine';
+        g.gain.setValueAtTime(0.2, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+        o.start(); o.stop(ac.currentTime + 0.1);
+    } catch(e) {}
 }
 
-function playTing() {
+function startSuspenseMusic(duration) {
     try {
-        const ac = getAudioContext();
-        const osc = ac.createOscillator();
-        const gain = ac.createGain();
-        osc.connect(gain);
-        gain.connect(ac.destination);
-        osc.frequency.value = 1200;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.5, ac.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.3);
-        osc.start(ac.currentTime);
-        osc.stop(ac.currentTime + 0.3);
-    } catch (e) { }
+        const ac = getAC();
+        suspenseNodes = [];
+        const notes = [130, 146, 130, 146, 155, 130, 146, 155, 164, 174];
+        const dSec = duration / 1000;
+        let t = ac.currentTime + 0.05;
+        let i = 0;
+        while (t < ac.currentTime + dSec) {
+            const prog = (t - ac.currentTime) / dSec;
+            const bps = 4 + prog * 10;
+            const blen = 1 / bps;
+            const o = ac.createOscillator();
+            const g = ac.createGain();
+            o.connect(g); g.connect(ac.destination);
+            o.type = i % 3 === 0 ? 'sawtooth' : 'sine';
+            o.frequency.value = notes[i % notes.length] * (1 + prog * 0.4);
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.12 + prog * 0.2, t + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.001, t + blen * 0.75);
+            o.start(t); o.stop(t + blen);
+            suspenseNodes.push(o);
+            t += blen; i++;
+        }
+    } catch(e) {}
 }
 
-// ===== PHÁT HIỆN THIẾT BỊ =====
-function detectDeviceType() {
+function stopSuspenseMusic() {
+    suspenseNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+    suspenseNodes = [];
+}
+
+function playFanfare() {
+    try {
+        const ac = getAC();
+        [[392,0],[392,0.13],[392,0.26],[311,0.39],[392,0.76]].forEach(([freq, start]) => {
+            const o = ac.createOscillator();
+            const g = ac.createGain();
+            o.connect(g); g.connect(ac.destination);
+            o.type = 'square'; o.frequency.value = freq;
+            const t = ac.currentTime + start;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.3, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+            o.start(t); o.stop(t + 0.4);
+        });
+    } catch(e) {}
+}
+
+// ===== DEVICE DETECTION =====
+function getDeviceInfo() {
     const ua = navigator.userAgent.toLowerCase();
     const isMobile = /iphone|ipod|android.*mobile/.test(ua);
-    // iPad iOS 13+ báo cáo là MacIntel nên kiểm tra thêm maxTouchPoints
-    const isTablet = /ipad/.test(ua) ||
-        (/macintosh/.test(ua) && navigator.maxTouchPoints > 1) ||
-        /android(?!.*mobile)/.test(ua);
-    const isDesktop = !isMobile && !isTablet;
-    return {
-        isMobile,
-        isTablet,
-        isDesktop,
-        isIOS: /iphone|ipad|ipod/.test(ua) || (/macintosh/.test(ua) && navigator.maxTouchPoints > 1),
-        isAndroid: /android/.test(ua)
-    };
+    const isTablet = /ipad/.test(ua) || (/macintosh/.test(ua) && navigator.maxTouchPoints > 1) || /android(?!.*mobile)/.test(ua);
+    const isIOS = /iphone|ipad|ipod/.test(ua) || (/macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    return { isMobile, isTablet, isIOS, isDesktop: !isMobile && !isTablet };
 }
 
-// ===== LIỆT KÊ CAMERA =====
+// ===== CAMERA LIST =====
 async function listCameras() {
     try {
-        const deviceInfo = detectDeviceType();
-        console.log('📱 Thiết bị:', deviceInfo);
-
-        // Yêu cầu quyền trước (không dùng exact để tránh lỗi trên iOS)
-        const initConstraints = {
-            video: {
-                facingMode: (deviceInfo.isMobile || deviceInfo.isTablet) ? 'environment' : 'user'
-            }
-        };
-        const initStream = await navigator.mediaDevices.getUserMedia(initConstraints);
-        // Dừng stream tạm này ngay sau khi có quyền
-        initStream.getTracks().forEach(t => t.stop());
+        const dev = getDeviceInfo();
+        // Xin quyền trước
+        const s = await navigator.mediaDevices.getUserMedia({ video: true });
+        s.getTracks().forEach(t => t.stop());
 
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        console.log('📹 Danh sách camera:', videoDevices);
+        const cams = devices.filter(d => d.kind === 'videoinput');
+        if (!cams.length) throw new Error('Không tìm thấy camera');
 
-        if (videoDevices.length === 0) throw new Error('Không tìm thấy camera nào!');
-
-        availableCameras = videoDevices;
         cameraSelect.innerHTML = '';
 
-        if (deviceInfo.isMobile || deviceInfo.isTablet) {
-            // Mobile/Tablet/iPad: dùng facingMode
-            const backOpt = document.createElement('option');
-            backOpt.value = 'environment';
-            backOpt.textContent = '📷 Camera Sau (Khuyến nghị)';
-            cameraSelect.appendChild(backOpt);
-
-            const frontOpt = document.createElement('option');
-            frontOpt.value = 'user';
-            frontOpt.textContent = '🤳 Camera Trước';
-            cameraSelect.appendChild(frontOpt);
-
+        if (dev.isMobile || dev.isTablet) {
+            cameraSelect.innerHTML = `
+                <option value="environment">📷 Camera Sau (Khuyến nghị)</option>
+                <option value="user">🤳 Camera Trước</option>`;
             selectedDeviceId = 'environment';
-            cameraSelect.value = 'environment';
         } else {
-            // Desktop/Laptop: dùng deviceId, ưu tiên USB/external
-            const optionsData = videoDevices.map((device, index) => {
-                let label = device.label || `Camera ${index + 1}`;
-                let priority = 0;
+            const sorted = cams.map((c, i) => {
+                const lbl = (c.label || `Camera ${i+1}`).toLowerCase();
+                let p = 1, icon = '🎥';
+                if (/usb|external|webcam|logitech|brio|c920|c922|elgato/.test(lbl)) { p = 3; icon = '🎥'; }
+                else if (/back|rear/.test(lbl)) { p = 2; icon = '📷'; }
+                else if (/front|facetime|built.in|internal|integrated/.test(lbl)) { p = 1; icon = '🤳'; }
+                return { id: c.deviceId, label: `${icon} ${c.label || 'Camera '+(i+1)}`, p };
+            }).sort((a,b) => b.p - a.p);
 
-                const lbl = label.toLowerCase();
-                if (lbl.includes('usb') || lbl.includes('external') || lbl.includes('webcam') ||
-                    lbl.includes('logitech') || lbl.includes('brio') || lbl.includes('c920') ||
-                    lbl.includes('c922') || lbl.includes('elgato') || lbl.includes('obs')) {
-                    label = `🎥 ${label} (Khuyến nghị)`;
-                    priority = 3;
-                } else if (lbl.includes('back') || lbl.includes('rear')) {
-                    label = `📷 ${label}`;
-                    priority = 2;
-                } else if (lbl.includes('front') || lbl.includes('facetime') || lbl.includes('integrated') ||
-                           lbl.includes('built-in') || lbl.includes('internal')) {
-                    label = `🤳 ${label}`;
-                    priority = 1;
-                } else {
-                    label = `🎥 ${label}`;
-                    priority = 1;
-                }
-
-                return { deviceId: device.deviceId, label, priority };
+            sorted.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.label + (c.p === 3 ? ' (Khuyến nghị)' : '');
+                cameraSelect.appendChild(o);
             });
-
-            // Sắp xếp theo priority giảm dần
-            optionsData.sort((a, b) => b.priority - a.priority);
-
-            optionsData.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.deviceId;
-                opt.textContent = item.label;
-                cameraSelect.appendChild(opt);
-            });
-
-            selectedDeviceId = optionsData[0].deviceId;
+            selectedDeviceId = sorted[0].id;
             cameraSelect.value = selectedDeviceId;
-            console.log('✅ Desktop: Camera được chọn:', optionsData[0].label);
         }
-
-    } catch (err) {
-        console.error('❌ Lỗi khi liệt kê camera:', err);
-        cameraSelect.innerHTML = '<option>❌ Lỗi: ' + err.message + '</option>';
+    } catch(err) {
         statusElement.textContent = '❌ Lỗi camera: ' + err.message;
         statusElement.style.color = '#f00';
     }
 }
 
-// ===== KHỞI ĐỘNG CAMERA (Tối ưu cho 30 học sinh - Mọi thiết bị) =====
-async function startCamera(deviceIdOrFacingMode = null) {
+// ===== START CAMERA =====
+async function startCamera(deviceIdOrMode) {
     try {
         if (video.srcObject) {
             video.srcObject.getTracks().forEach(t => t.stop());
             video.srcObject = null;
         }
 
-        const deviceInfo = detectDeviceType();
-        let constraints;
+        const dev = getDeviceInfo();
+        const isFacingMode = deviceIdOrMode === 'environment' || deviceIdOrMode === 'user';
 
-        // Luôn yêu cầu landscape với độ phân giải tối đa thiết bị hỗ trợ
-        // Dùng số rất lớn → browser tự chọn max resolution của thiết bị đó
-        const landscapeVideo = {
-            width:  { ideal: 99999 },
-            height: { ideal: 99999 },
-            aspectRatio: { ideal: 16/9 },
-            frameRate: { ideal: 30 }
-        };
-
-        if (deviceIdOrFacingMode === 'environment' || deviceIdOrFacingMode === 'user') {
-            // Mobile/Tablet/iPad: không dùng exact trên iOS
-            constraints = {
-                video: {
-                    facingMode: deviceInfo.isIOS ? deviceIdOrFacingMode : { exact: deviceIdOrFacingMode },
-                    ...landscapeVideo
-                }
+        // Constraints: luôn ưu tiên landscape (width > height)
+        let videoConstraints;
+        if (isFacingMode) {
+            videoConstraints = {
+                facingMode: (dev.isIOS) ? deviceIdOrMode : { exact: deviceIdOrMode },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                aspectRatio: { ideal: 16/9 }
             };
-            console.log('📱 Mobile/Tablet mode:', deviceIdOrFacingMode);
         } else {
-            // Desktop/Laptop: deviceId
-            constraints = {
-                video: {
-                    deviceId: deviceIdOrFacingMode ? { exact: deviceIdOrFacingMode } : undefined,
-                    ...landscapeVideo
-                }
+            videoConstraints = {
+                deviceId: deviceIdOrMode ? { exact: deviceIdOrMode } : undefined,
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                aspectRatio: { ideal: 16/9 }
             };
-            console.log('💻 Desktop mode, deviceId:', deviceIdOrFacingMode);
         }
 
         let stream;
         try {
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-        } catch (constraintErr) {
-            // Fallback: thử lại với constraints đơn giản hơn
-            console.warn('⚠️ Constraint thất bại, thử fallback:', constraintErr.name);
-            const fallback = {
-                video: deviceIdOrFacingMode && deviceIdOrFacingMode !== 'environment' && deviceIdOrFacingMode !== 'user'
-                    ? { deviceId: { exact: deviceIdOrFacingMode } }
-                    : { facingMode: deviceIdOrFacingMode || 'user' }
-            };
-            stream = await navigator.mediaDevices.getUserMedia(fallback);
+            stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+        } catch(e) {
+            // Fallback đơn giản nhất
+            console.warn('Fallback camera:', e.name);
+            const fallback = isFacingMode
+                ? { facingMode: deviceIdOrMode }
+                : (deviceIdOrMode ? { deviceId: { exact: deviceIdOrMode } } : true);
+            stream = await navigator.mediaDevices.getUserMedia({ video: fallback });
         }
 
         video.srcObject = stream;
 
-        const videoTrack = stream.getVideoTracks()[0];
-        const settings = videoTrack.getSettings();
-        console.log('📹 Camera settings:', settings);
-
-        return new Promise((resolve) => {
+        await new Promise(resolve => {
             video.onloadedmetadata = () => {
-                // Canvas = video resolution thực tế → tọa độ detection khớp 1:1
+                // Canvas = video resolution → tọa độ detection khớp 1:1
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                console.log(`✅ Camera: ${video.videoWidth}x${video.videoHeight}`);
-                video.style.filter = 'contrast(1.2) brightness(1.08) saturate(1.15)';
-                statusElement.textContent = `✅ Camera: ${video.videoWidth}x${video.videoHeight} @ ${Math.round(settings.frameRate || 30)}fps`;
+                const t = stream.getVideoTracks()[0].getSettings();
+                statusElement.textContent = `✅ Camera: ${video.videoWidth}x${video.videoHeight} @ ${Math.round(t.frameRate||30)}fps`;
                 statusElement.style.color = '#0f0';
                 resolve();
             };
-            setTimeout(() => {
-                if (video.videoWidth && canvas.width === 0) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                }
-                resolve();
-            }, 3000);
+            // Safety timeout
+            setTimeout(resolve, 4000);
         });
 
-    } catch (err) {
-        console.error('❌ Lỗi camera:', err);
-        statusElement.textContent = '❌ Không thể truy cập camera! Kiểm tra quyền truy cập.';
+        // Đảm bảo canvas có kích thước nếu timeout fire trước metadata
+        if (!canvas.width && video.videoWidth) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        }
+
+    } catch(err) {
+        console.error('Camera error:', err);
+        statusElement.textContent = '❌ Không thể mở camera: ' + err.message;
         statusElement.style.color = '#f00';
     }
 }
 
-// ===== LOAD AI MODELS =====
+// ===== LOAD MODELS =====
 async function loadModels() {
     try {
-        statusElement.textContent = '⚡ Đang tải AI Models...';
+        statusElement.textContent = '⚡ Đang tải AI...';
         statusElement.className = 'status loading';
-
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
-
         await Promise.all([
             faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
             faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
         ]);
-
-        console.log('✅ AI Models đã load!');
         modelsLoaded = true;
-        statusElement.textContent = '✅ AI sẵn sàng! (SSD MobileNet v1 - Nhận diện xa & rộng)';
+        statusElement.className = 'status';
+        statusElement.textContent = '✅ AI sẵn sàng! Nhấn BẮT ĐẦU QUÉT.';
         statusElement.style.color = '#0f0';
-        statusElement.style.textShadow = '0 0 10px #0f0';
         startButton.disabled = false;
-
-    } catch (err) {
-        console.error('Lỗi load models:', err);
-        statusElement.textContent = '❌ Lỗi tải AI models! Kiểm tra kết nối mạng.';
+    } catch(err) {
+        statusElement.textContent = '❌ Lỗi tải AI: ' + err.message;
         statusElement.style.color = '#f00';
     }
 }
 
-// ===== MỞ RỘNG BOUNDING BOX =====
-function expandBoundingBox(box, canvasWidth, canvasHeight) {
-    // Mở rộng mỗi bên 60% width, trên 55%, dưới 110% (lấy cả vai + ngực)
-    const newX = box.x - box.width * 0.6;
-    const newY = box.y - box.height * 0.55;
-    const newWidth = box.width * 2.2;
-    const newHeight = box.height * 2.65;
-
-    const clampedX = Math.max(0, newX);
-    const clampedY = Math.max(0, newY);
-    const clampedWidth = Math.min(newWidth, canvasWidth - clampedX);
-    const clampedHeight = Math.min(newHeight, canvasHeight - clampedY);
-
-    return { x: clampedX, y: clampedY, width: clampedWidth, height: clampedHeight };
+// ===== EXPAND BOX =====
+function expandBox(box) {
+    const nx = box.x - box.width * 0.6;
+    const ny = box.y - box.height * 0.55;
+    const nw = box.width * 2.2;
+    const nh = box.height * 2.65;
+    return {
+        x: Math.max(0, nx),
+        y: Math.max(0, ny),
+        width: Math.min(nw, canvas.width - Math.max(0, nx)),
+        height: Math.min(nh, canvas.height - Math.max(0, ny))
+    };
 }
 
-// ===== MULTI-SCALE DETECTION: Bắt khuôn mặt nhỏ ở xa =====
-// Vẽ video lên canvas tạm với scale khác nhau rồi chạy detection
-async function detectAtScale(sourceVideo, scale) {
-    const vw = sourceVideo.videoWidth;
-    const vh = sourceVideo.videoHeight;
-
-    const w = Math.round(vw * scale);
-    const h = Math.round(vh * scale);
-
-    const offscreen = document.createElement('canvas');
-    offscreen.width = w;
-    offscreen.height = h;
-    const offCtx = offscreen.getContext('2d');
-
-    offCtx.filter = 'contrast(1.3) brightness(1.1)';
-    offCtx.drawImage(sourceVideo, 0, 0, vw, vh, 0, 0, w, h);
-
-    const options = new faceapi.SsdMobilenetv1Options({
-        minConfidence: 0.25,
-        maxResults: 50
-    });
-
-    const results = await faceapi.detectAllFaces(offscreen, options);
-
-    // Tọa độ detection trên offscreen → scale về video resolution (= canvas resolution)
-    return results.map(det => {
-        const b = det.box;
-        return {
-            score: det.score,
-            box: {
-                x: b.x / scale,
-                y: b.y / scale,
-                width: b.width / scale,
-                height: b.height / scale
-            }
-        };
-    });
+// ===== DETECT FACES (multi-scale) =====
+async function detectAtScale(scale) {
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) return [];
+    const w = Math.round(vw * scale), h = Math.round(vh * scale);
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const octx = off.getContext('2d');
+    octx.filter = 'contrast(1.3) brightness(1.1)';
+    octx.drawImage(video, 0, 0, w, h);
+    const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.25, maxResults: 50 });
+    const results = await faceapi.detectAllFaces(off, opts);
+    return results.map(d => ({
+        score: d.score,
+        box: { x: d.box.x/scale, y: d.box.y/scale, width: d.box.width/scale, height: d.box.height/scale }
+    }));
 }
 
-// Loại bỏ các box trùng lặp (IoU > threshold)
 function iou(a, b) {
-    const x1 = Math.max(a.x, b.x);
-    const y1 = Math.max(a.y, b.y);
-    const x2 = Math.min(a.x + a.width, b.x + b.width);
-    const y2 = Math.min(a.y + a.height, b.y + b.height);
-    const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-    const union = a.width * a.height + b.width * b.height - inter;
-    return union > 0 ? inter / union : 0;
+    const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
+    const x2 = Math.min(a.x+a.width, b.x+b.width), y2 = Math.min(a.y+a.height, b.y+b.height);
+    const inter = Math.max(0, x2-x1) * Math.max(0, y2-y1);
+    const union = a.width*a.height + b.width*b.height - inter;
+    return union > 0 ? inter/union : 0;
 }
 
-function mergeDetections(allResults) {
-    // Sắp xếp theo score giảm dần
-    const sorted = allResults.slice().sort((a, b) => b.score - a.score);
+function mergeDetections(all) {
+    const sorted = all.slice().sort((a,b) => b.score - a.score);
     const kept = [];
-    for (const det of sorted) {
-        const overlap = kept.some(k => iou(k.box, det.box) > 0.4);
-        if (!overlap) kept.push(det);
+    for (const d of sorted) {
+        if (!kept.some(k => iou(k.box, d.box) > 0.4)) kept.push(d);
     }
     return kept;
 }
 
-// ===== PHÁT HIỆN KHUÔN MẶT LIÊN TỤC =====
 async function detectFaces() {
     if (!modelsLoaded || !video.videoWidth) {
         animationFrameId = requestAnimationFrame(detectFaces);
         return;
     }
-
     try {
-        // Chạy song song 3 scale:
-        // 1.0 = gốc (mặt gần, to)
-        // 1.5 = phóng to 1.5x (bắt mặt trung bình)
-        // 2.2 = phóng to 2.2x (bắt mặt nhỏ ở xa)
         const [r1, r2, r3] = await Promise.all([
-            detectAtScale(video, 1.0),
-            detectAtScale(video, 1.5),
-            detectAtScale(video, 2.2)
+            detectAtScale(1.0),
+            detectAtScale(1.5),
+            detectAtScale(2.2)
         ]);
-
-        const merged = mergeDetections([...r1, ...r2, ...r3]);
-        detections = merged;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        detections = mergeDetections([...r1, ...r2, ...r3]);
 
         if (!isScanning) {
-            detections.forEach((detection, index) => {
-                const expandedBox = expandBoundingBox(detection.box, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            detections.forEach((d, i) => {
+                const b = expandBox(d.box);
                 ctx.strokeStyle = '#f00';
                 ctx.lineWidth = 3;
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#f00';
-                ctx.strokeRect(expandedBox.x, expandedBox.y, expandedBox.width, expandedBox.height);
+                ctx.strokeRect(b.x, b.y, b.width, b.height);
+                ctx.shadowBlur = 0;
                 ctx.fillStyle = '#f00';
                 ctx.font = 'bold 14px Courier New';
-                ctx.shadowBlur = 0;
-                ctx.fillText(`#${index + 1}`, expandedBox.x + 5, expandedBox.y + 20);
+                ctx.fillText(`#${i+1}`, b.x+5, b.y+20);
             });
-
-            // Hiển thị số lượng khuôn mặt phát hiện được
             if (detections.length > 0) {
                 ctx.fillStyle = '#0ff';
                 ctx.font = 'bold 16px Courier New';
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = '#0ff';
+                ctx.shadowBlur = 8; ctx.shadowColor = '#0ff';
                 ctx.fillText(`👥 ${detections.length} người`, 10, canvas.height - 10);
                 ctx.shadowBlur = 0;
             }
         }
-
-    } catch (err) {
-        console.error('Lỗi phát hiện khuôn mặt:', err);
+    } catch(e) {
+        console.error('Detection error:', e);
     }
-
     animationFrameId = requestAnimationFrame(detectFaces);
 }
 
-// ===== HIỆU ỨNG CHỌN NGẪU NHIÊN =====
-async function startRandomSelection() {
+// ===== SCAN =====
+function startRandomSelection() {
     if (detections.length === 0) {
-        alert('⚠️ Không phát hiện khuôn mặt nào! Hãy đảm bảo có người trong khung hình.');
+        alert('⚠️ Không phát hiện khuôn mặt nào!');
         return;
     }
-
     isScanning = true;
     startButton.disabled = true;
     scanDurationSlider.disabled = true;
-    statusElement.textContent = `🎯 ĐANG QUÉT (${scanDuration / 1000}s)... Phát hiện ${detections.length} khuôn mặt`;
+    statusElement.textContent = `🎯 ĐANG QUÉT... ${detections.length} khuôn mặt`;
     statusElement.style.color = '#f00';
 
     playBeep();
@@ -564,243 +346,166 @@ async function startRandomSelection() {
     scanTimerFillHorizontal.style.width = '0%';
 
     const duration = scanDuration;
-    const startTime = performance.now();
-    let currentTargetIndex = -1;
-    let lastBeepTime = startTime;
-    const beepInterval = Math.max(200, duration / 10);
+    const t0 = performance.now();
+    let targetIdx = -1;
+    let lastHop = t0;
     let hopInterval = 80;
-    let lastHopTime = startTime;
 
-    function animateScan(currentTime) {
-        const elapsed = currentTime - startTime;
+    function frame(now) {
+        const elapsed = now - t0;
         const progress = Math.min(elapsed / duration, 1);
 
-        if (currentTime - lastBeepTime > beepInterval && progress < 0.95) {
-            playBeep();
-            lastBeepTime = currentTime;
+        hopInterval = progress < 0.7 ? 80 : progress < 0.9 ? 150 : 300 + (progress - 0.9) * 2000;
+
+        if (now - lastHop > hopInterval) {
+            targetIdx = Math.floor(Math.random() * detections.length);
+            lastHop = now;
         }
 
-        // Speed ramping
-        if (progress < 0.7) {
-            hopInterval = 80;
-        } else if (progress < 0.9) {
-            hopInterval = 150;
-        } else {
-            hopInterval = 300 + (progress - 0.9) * 2000;
-        }
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         scanTimerFillHorizontal.style.width = (progress * 100) + '%';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (detections.length > 0) {
-            // Vẽ tất cả ô đỏ
-            detections.forEach((detection) => {
-                const expandedBox = expandBoundingBox(detection.box, canvas.width, canvas.height);
-                ctx.strokeStyle = '#f00';
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#f00';
-                ctx.strokeRect(expandedBox.x, expandedBox.y, expandedBox.width, expandedBox.height);
-                ctx.shadowBlur = 0;
-            });
-
-            // Random hopping
-            if (currentTime - lastHopTime > hopInterval) {
-                currentTargetIndex = Math.floor(Math.random() * detections.length);
-                lastHopTime = currentTime;
+        detections.forEach((d, i) => {
+            const b = expandBox(d.box);
+            const isTarget = i === targetIdx;
+            let color = '#f00';
+            if (isTarget) {
+                color = progress > 0.9 ? '#ff0' : progress > 0.7 ? '#0f0' : '#0ff';
             }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isTarget ? 4 : 3;
+            ctx.shadowBlur = isTarget ? 20 : 15;
+            ctx.shadowColor = color;
+            ctx.strokeRect(b.x, b.y, b.width, b.height);
+            ctx.shadowBlur = 0;
+        });
 
-            // Vẽ crosshair
-            if (currentTargetIndex >= 0 && currentTargetIndex < detections.length) {
-                const expandedTargetBox = expandBoundingBox(detections[currentTargetIndex].box, canvas.width, canvas.height);
-                const centerX = expandedTargetBox.x + expandedTargetBox.width / 2;
-                const centerY = expandedTargetBox.y + expandedTargetBox.height / 2;
-                const size = Math.max(expandedTargetBox.width, expandedTargetBox.height) * 0.8;
-
-                let crosshairColor = '#0ff';
-                if (progress > 0.9) crosshairColor = '#ff0';
-                else if (progress > 0.7) crosshairColor = '#0f0';
-
-                ctx.strokeStyle = crosshairColor;
-                ctx.lineWidth = 4;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = crosshairColor;
-
-                ctx.beginPath();
-                ctx.moveTo(centerX - size / 2, centerY);
-                ctx.lineTo(centerX + size / 2, centerY);
-                ctx.moveTo(centerX, centerY - size / 2);
-                ctx.lineTo(centerX, centerY + size / 2);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, size / 2, 0, 2 * Math.PI);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-            }
+        // Crosshair trên target
+        if (targetIdx >= 0 && targetIdx < detections.length) {
+            const b = expandBox(detections[targetIdx].box);
+            const cx = b.x + b.width/2, cy = b.y + b.height/2;
+            const sz = Math.max(b.width, b.height) * 0.8;
+            const color = progress > 0.9 ? '#ff0' : progress > 0.7 ? '#0f0' : '#0ff';
+            ctx.strokeStyle = color; ctx.lineWidth = 4;
+            ctx.shadowBlur = 20; ctx.shadowColor = color;
+            ctx.beginPath();
+            ctx.moveTo(cx - sz/2, cy); ctx.lineTo(cx + sz/2, cy);
+            ctx.moveTo(cx, cy - sz/2); ctx.lineTo(cx, cy + sz/2);
+            ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, sz/2, 0, Math.PI*2); ctx.stroke();
+            ctx.shadowBlur = 0;
         }
 
         if (progress < 1) {
-            requestAnimationFrame(animateScan);
+            requestAnimationFrame(frame);
         } else {
             scanTimerFillHorizontal.style.width = '100%';
             scanTimerHorizontal.style.display = 'none';
-            // Truyền thẳng index đang highlight vào finishSelection, không delay
-            finishSelection(currentTargetIndex >= 0 ? currentTargetIndex : Math.floor(Math.random() * detections.length));
+            finishSelection(targetIdx >= 0 ? targetIdx : Math.floor(Math.random() * detections.length));
         }
     }
-
-    requestAnimationFrame(animateScan);
+    requestAnimationFrame(frame);
 }
 
-// ===== KẾT THÚC VÀ HIỂN THỊ KẾT QUẢ =====
-function finishSelection(finalIndex) {
+// ===== FINISH =====
+function finishSelection(finalIdx) {
     stopSuspenseMusic();
     playFanfare();
 
-    if (detections.length === 0) {
-        alert('⚠️ Không còn khuôn mặt nào trong khung hình!');
+    if (detections.length === 0 || finalIdx < 0 || finalIdx >= detections.length) {
         isScanning = false;
         startButton.disabled = false;
         scanDurationSlider.disabled = false;
         return;
     }
 
-    // Dùng index từ animation, không random lại
-    if (finalIndex === undefined || finalIndex < 0 || finalIndex >= detections.length) {
-        finalIndex = Math.floor(Math.random() * detections.length);
-    }
+    const box = expandBox(detections[finalIdx].box);
 
-    const box = detections[finalIndex].box;
-
-    // Crop và hiển thị overlay NGAY LẬP TỨC
-    const expandedFinalBox = expandBoundingBox(box, canvas.width, canvas.height);
-    resultImageLarge.src = cropFace(expandedFinalBox);
+    // Crop ảnh từ video (canvas = video resolution → tọa độ khớp 1:1)
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.round(box.width * 1.5);
+    tmp.height = Math.round(box.height * 1.5);
+    const tctx = tmp.getContext('2d');
+    tctx.imageSmoothingEnabled = true;
+    tctx.imageSmoothingQuality = 'high';
+    tctx.drawImage(video, box.x, box.y, box.width, box.height, 0, 0, tmp.width, tmp.height);
+    resultImageLarge.src = tmp.toDataURL('image/jpeg', 0.95);
     resultOverlay.style.display = 'flex';
 
     statusElement.textContent = '✅ ĐÃ CHỌN XONG!';
     statusElement.style.color = '#0f0';
-    statusElement.style.textShadow = '0 0 10px #0f0';
 
-    // Blink canvas ở nền (không block overlay)
-    let blinkCount = 0;
-    const maxBlinks = 4;
-    const blinkInterval = setInterval(() => {
+    // Blink
+    let blinks = 0;
+    const blink = setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        detections.forEach((detection, index) => {
-            const expandedBox = expandBoundingBox(detection.box, canvas.width, canvas.height);
-            if (index === finalIndex) {
-                ctx.strokeStyle = blinkCount % 2 === 0 ? '#0f0' : '#ff0';
-                ctx.lineWidth = 6;
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = blinkCount % 2 === 0 ? '#0f0' : '#ff0';
+        detections.forEach((d, i) => {
+            const b = expandBox(d.box);
+            if (i === finalIdx) {
+                ctx.strokeStyle = blinks % 2 === 0 ? '#0f0' : '#ff0';
+                ctx.lineWidth = 6; ctx.shadowBlur = 30;
+                ctx.shadowColor = blinks % 2 === 0 ? '#0f0' : '#ff0';
             } else {
-                ctx.strokeStyle = '#f00';
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#f00';
+                ctx.strokeStyle = '#f00'; ctx.lineWidth = 3;
+                ctx.shadowBlur = 15; ctx.shadowColor = '#f00';
             }
-            ctx.strokeRect(expandedBox.x, expandedBox.y, expandedBox.width, expandedBox.height);
+            ctx.strokeRect(b.x, b.y, b.width, b.height);
             ctx.shadowBlur = 0;
         });
-        blinkCount++;
-        if (blinkCount >= maxBlinks) {
-            clearInterval(blinkInterval);
-            isScanning = false;
-        }
+        if (++blinks >= 4) { clearInterval(blink); isScanning = false; }
     }, 100);
 }
 
-// ===== CROP KHUÔN MẶT =====
-function cropFace(expandedBox) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
+// ===== EVENTS =====
+btnCelebrate.addEventListener('click', () => alert('🎉 Chúc mừng bạn đã được chọn! 🎉'));
 
-    // Canvas = video resolution → tọa độ expandedBox dùng thẳng được
-    const zoomFactor = 1.5;
-    tempCanvas.width = Math.round(expandedBox.width * zoomFactor);
-    tempCanvas.height = Math.round(expandedBox.height * zoomFactor);
-
-    tempCtx.imageSmoothingEnabled = true;
-    tempCtx.imageSmoothingQuality = 'high';
-
-    tempCtx.drawImage(
-        video,
-        expandedBox.x, expandedBox.y, expandedBox.width, expandedBox.height,
-        0, 0, tempCanvas.width, tempCanvas.height
-    );
-
-    return tempCanvas.toDataURL('image/jpeg', 0.95);
-}
-
-// ===== NÚT CHÚC MỪNG =====
-btnCelebrate.addEventListener('click', () => {
-    alert('🎉 Chúc mừng bạn đã được chọn! 🎉');
-});
-
-// ===== NÚT TIẾP TỤC QUÉT =====
 btnContinue.addEventListener('click', () => {
     resultOverlay.style.display = 'none';
     startButton.disabled = false;
     scanDurationSlider.disabled = false;
-    statusElement.textContent = '✅ AI sẵn sàng! Nhấn nút để bắt đầu.';
+    statusElement.textContent = '✅ AI sẵn sàng! Nhấn BẮT ĐẦU QUÉT.';
     statusElement.style.color = '#0f0';
 });
 
-// ===== THAY ĐỔI CAMERA =====
 cameraSelect.addEventListener('change', async (e) => {
     selectedDeviceId = e.target.value;
-    console.log('🔄 Đang chuyển camera:', selectedDeviceId);
     statusElement.textContent = '🔄 Đang chuyển camera...';
     statusElement.style.color = '#ff0';
-
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
-
     await startCamera(selectedDeviceId);
     detectFaces();
-
-    statusElement.textContent = '✅ Đã chuyển camera! Sẵn sàng quét.';
-    statusElement.style.color = '#0f0';
 });
 
-// ===== SLIDER THỜI GIAN QUÉT =====
 scanDurationSlider.addEventListener('input', (e) => {
-    const value = parseFloat(e.target.value);
-    scanDuration = value * 1000;
-    durationValue.textContent = value;
+    scanDuration = parseFloat(e.target.value) * 1000;
+    durationValue.textContent = e.target.value;
 });
 
-// ===== NÚT BẮT ĐẦU QUÉT =====
 startButton.addEventListener('click', startRandomSelection);
 
-// ===== LẮNG NGHE XOAY MÀN HÌNH (Mobile/Tablet) =====
-screen.orientation
-    ? screen.orientation.addEventListener('change', handleOrientationChange)
-    : window.addEventListener('orientationchange', handleOrientationChange);
-
-async function handleOrientationChange() {
+// Xoay màn hình → restart camera
+const orientationHandler = async () => {
     if (!selectedDeviceId) return;
-    // Đợi browser hoàn tất xoay xong rồi mới restart camera
     setTimeout(async () => {
-        console.log('🔄 Xoay màn hình, restart camera...');
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         await startCamera(selectedDeviceId);
         detectFaces();
-    }, 300);
-}
+    }, 400);
+};
+if (screen.orientation) screen.orientation.addEventListener('change', orientationHandler);
+else window.addEventListener('orientationchange', orientationHandler);
+
+// Camera ngoài cắm vào
 navigator.mediaDevices.addEventListener('devicechange', async () => {
-    console.log('🔌 Thiết bị thay đổi, cập nhật danh sách camera...');
-    const prevSelected = selectedDeviceId;
+    const prev = selectedDeviceId;
     await listCameras();
-    // Nếu camera cũ vẫn còn, giữ nguyên lựa chọn
-    const stillExists = Array.from(cameraSelect.options).some(o => o.value === prevSelected);
-    if (stillExists) {
-        selectedDeviceId = prevSelected;
-        cameraSelect.value = prevSelected;
+    if (Array.from(cameraSelect.options).some(o => o.value === prev)) {
+        selectedDeviceId = prev;
+        cameraSelect.value = prev;
     }
 });
 
-// ===== KHỞI ĐỘNG ỨNG DỤNG =====
+// ===== INIT =====
 async function init() {
     statusElement.textContent = '⚡ Đang khởi động...';
     await listCameras();
