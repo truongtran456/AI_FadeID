@@ -43,76 +43,55 @@ function startSuspenseMusic(duration) {
         const ac = getAudioContext();
         suspenseMusicNodes = [];
 
-        // Nốt nhạc hồi hộp: pattern lặp lại, tăng tốc dần
-        // Dùng tần số thấp tạo cảm giác căng thẳng
         const baseNotes = [130, 146, 130, 146, 155, 130, 146, 155, 164, 174];
-        const totalBeats = Math.floor(duration / 1000 * 8); // 8 beats/giây
-        
-        for (let i = 0; i < totalBeats; i++) {
-            // Tốc độ tăng dần: đầu chậm, cuối nhanh
-            const progress = i / totalBeats;
-            const beatInterval = duration / 1000 / (4 + progress * 8); // 4→12 beats/s
-            const startTime = ac.currentTime + i * beatInterval * (1 - progress * 0.3);
-            
-            if (startTime > ac.currentTime + duration / 1000) break;
+        const durationSec = duration / 1000;
+        let t = ac.currentTime + 0.05;
+        let beatIdx = 0;
 
-            const note = baseNotes[i % baseNotes.length];
-            // Cuối melody: tăng pitch nhanh
-            const freq = note * (1 + progress * 0.5);
+        while (t < ac.currentTime + durationSec) {
+            const progress = (t - ac.currentTime) / durationSec;
+            // Tốc độ tăng dần: 4 beats/s → 14 beats/s
+            const bps = 4 + progress * 10;
+            const beatLen = 1 / bps;
+
+            const freq = baseNotes[beatIdx % baseNotes.length] * (1 + progress * 0.4);
+            const vol = 0.12 + progress * 0.22;
 
             const osc = ac.createOscillator();
             const gain = ac.createGain();
-            // Thêm chút reverb bằng delay
-            const delay = ac.createDelay(0.1);
-            delay.delayTime.value = 0.05;
-
             osc.connect(gain);
-            gain.connect(delay);
-            delay.connect(ac.destination);
             gain.connect(ac.destination);
-
-            osc.type = i % 3 === 0 ? 'sawtooth' : 'sine';
+            osc.type = beatIdx % 3 === 0 ? 'sawtooth' : 'sine';
             osc.frequency.value = freq;
-
-            const vol = 0.15 + progress * 0.2;
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(vol, startTime + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + beatInterval * 0.8);
-
-            osc.start(startTime);
-            osc.stop(startTime + beatInterval);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(vol, t + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + beatLen * 0.75);
+            osc.start(t);
+            osc.stop(t + beatLen);
             suspenseMusicNodes.push(osc);
-        }
 
-        // Drum kick pattern (tiếng trống thình thịch)
-        for (let i = 0; i < totalBeats * 2; i++) {
-            const progress = i / (totalBeats * 2);
-            const beatInterval = duration / 1000 / (4 + progress * 8);
-            const startTime = ac.currentTime + i * beatInterval * (1 - progress * 0.3);
-
-            if (startTime > ac.currentTime + duration / 1000) break;
-            if (i % 2 !== 0) continue; // Chỉ đánh beat chẵn
-
-            const bufSize = ac.sampleRate * 0.1;
-            const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
-            const data = buf.getChannelData(0);
-            for (let j = 0; j < bufSize; j++) {
-                data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.1));
+            // Drum kick mỗi 2 beats
+            if (beatIdx % 2 === 0) {
+                const bufSize = Math.floor(ac.sampleRate * 0.08);
+                const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let j = 0; j < bufSize; j++) {
+                    data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.12));
+                }
+                const src = ac.createBufferSource();
+                src.buffer = buf;
+                const kg = ac.createGain();
+                kg.gain.setValueAtTime(0.18 + progress * 0.25, t);
+                kg.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+                src.connect(kg);
+                kg.connect(ac.destination);
+                src.start(t);
+                suspenseMusicNodes.push(src);
             }
-            const src = ac.createBufferSource();
-            src.buffer = buf;
 
-            const kickGain = ac.createGain();
-            const kickVol = (0.2 + progress * 0.3);
-            kickGain.gain.setValueAtTime(kickVol, startTime);
-            kickGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
-
-            src.connect(kickGain);
-            kickGain.connect(ac.destination);
-            src.start(startTime);
-            suspenseMusicNodes.push(src);
+            t += beatLen;
+            beatIdx++;
         }
-
     } catch (e) { console.warn('Audio error:', e); }
 }
 
@@ -381,21 +360,19 @@ async function startCamera(deviceIdOrFacingMode = null) {
 
         return new Promise((resolve) => {
             video.onloadedmetadata = () => {
-                // Canvas match đúng kích thước hiển thị của container, không phải video resolution
-                const container = video.parentElement;
-                canvas.width = container.clientWidth || video.videoWidth;
-                canvas.height = container.clientHeight || video.videoHeight;
-                console.log(`✅ Camera: ${video.videoWidth}x${video.videoHeight}, Canvas: ${canvas.width}x${canvas.height}`);
+                // Canvas = video resolution thực tế → tọa độ detection khớp 1:1
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                console.log(`✅ Camera: ${video.videoWidth}x${video.videoHeight}`);
                 video.style.filter = 'contrast(1.2) brightness(1.08) saturate(1.15)';
-                statusElement.textContent = `✅ Camera: ${settings.width || video.videoWidth}x${settings.height || video.videoHeight} @ ${Math.round(settings.frameRate || 30)}fps`;
+                statusElement.textContent = `✅ Camera: ${video.videoWidth}x${video.videoHeight} @ ${Math.round(settings.frameRate || 30)}fps`;
                 statusElement.style.color = '#0f0';
                 resolve();
             };
             setTimeout(() => {
-                if (video.videoWidth) {
-                    const container = video.parentElement;
-                    canvas.width = container.clientWidth || video.videoWidth;
-                    canvas.height = container.clientHeight || video.videoHeight;
+                if (video.videoWidth && canvas.width === 0) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
                 }
                 resolve();
             }, 3000);
@@ -475,19 +452,16 @@ async function detectAtScale(sourceVideo, scale) {
 
     const results = await faceapi.detectAllFaces(offscreen, options);
 
-    // Chuyển tọa độ: video space → canvas display space
-    const scaleX = canvas.width / vw;
-    const scaleY = canvas.height / vh;
-
+    // Tọa độ detection trên offscreen → scale về video resolution (= canvas resolution)
     return results.map(det => {
         const b = det.box;
         return {
             score: det.score,
             box: {
-                x: (b.x / scale) * scaleX,
-                y: (b.y / scale) * scaleY,
-                width: (b.width / scale) * scaleX,
-                height: (b.height / scale) * scaleY
+                x: b.x / scale,
+                y: b.y / scale,
+                width: b.width / scale,
+                height: b.height / scale
             }
         };
     });
@@ -738,30 +712,21 @@ function finishSelection(finalIndex) {
 }
 
 // ===== CROP KHUÔN MẶT =====
-// expandedBox ở canvas display space → cần convert về video space để crop đúng
 function cropFace(expandedBox) {
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Scale ngược từ canvas display → video resolution
-    const scaleX = video.videoWidth / canvas.width;
-    const scaleY = video.videoHeight / canvas.height;
-
-    const cropX = expandedBox.x * scaleX;
-    const cropY = expandedBox.y * scaleY;
-    const cropW = expandedBox.width * scaleX;
-    const cropH = expandedBox.height * scaleY;
-
+    // Canvas = video resolution → tọa độ expandedBox dùng thẳng được
     const zoomFactor = 1.5;
-    tempCanvas.width = Math.round(cropW * zoomFactor);
-    tempCanvas.height = Math.round(cropH * zoomFactor);
+    tempCanvas.width = Math.round(expandedBox.width * zoomFactor);
+    tempCanvas.height = Math.round(expandedBox.height * zoomFactor);
 
     tempCtx.imageSmoothingEnabled = true;
     tempCtx.imageSmoothingQuality = 'high';
 
     tempCtx.drawImage(
         video,
-        cropX, cropY, cropW, cropH,
+        expandedBox.x, expandedBox.y, expandedBox.width, expandedBox.height,
         0, 0, tempCanvas.width, tempCanvas.height
     );
 
@@ -804,16 +769,6 @@ scanDurationSlider.addEventListener('input', (e) => {
     scanDuration = value * 1000;
     durationValue.textContent = value;
 });
-
-// ===== RESIZE CANVAS KHI WINDOW THAY ĐỔI =====
-function resizeCanvas() {
-    const container = video.parentElement;
-    if (container && container.clientWidth > 0) {
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
-    }
-}
-window.addEventListener('resize', resizeCanvas);
 
 // ===== NÚT BẮT ĐẦU QUÉT =====
 startButton.addEventListener('click', startRandomSelection);
