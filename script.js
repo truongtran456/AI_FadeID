@@ -13,8 +13,6 @@ const btnCelebrate = document.getElementById('btnCelebrate');
 const btnContinue = document.getElementById('btnContinue');
 const scanDurationSlider = document.getElementById('scanDuration');
 const durationValue = document.getElementById('durationValue');
-const zoomRange = document.getElementById('zoomRange');
-const zoomValue = document.getElementById('zoomValue');
 
 let detections = [];
 let isScanning = false;
@@ -23,7 +21,6 @@ let animationFrameId = null;
 let selectedDeviceId = null;
 let scanDuration = 3000;
 let availableCameras = [];
-let currentZoom = 1.0; // Mức zoom hiện tại
 
 // ===== ÂM THANH (lazy-init để tránh bị block trên iOS) =====
 let audioContext = null;
@@ -653,38 +650,6 @@ scanDurationSlider.addEventListener('input', (e) => {
     scanDuration = value * 1000;
     durationValue.textContent = value;
 });
-
-// ===== SLIDER ZOOM =====
-zoomRange.addEventListener('input', async (e) => {
-    currentZoom = parseFloat(e.target.value);
-    zoomValue.textContent = currentZoom.toFixed(1);
-    await applyZoom(currentZoom);
-});
-
-async function applyZoom(zoom) {
-    if (!video.srcObject) return;
-    const track = video.srcObject.getVideoTracks()[0];
-    if (!track) return;
-
-    // Thử hardware zoom trước (Android Chrome, một số webcam USB)
-    try {
-        const caps = track.getCapabilities();
-        if (caps.zoom) {
-            const minZ = caps.zoom.min;
-            const maxZ = caps.zoom.max;
-            const clampedZoom = Math.min(maxZ, Math.max(minZ, zoom));
-            await track.applyConstraints({ advanced: [{ zoom: clampedZoom }] });
-            // Hardware zoom thành công: reset CSS transform
-            video.style.transform = 'scale(1)';
-            video.style.transformOrigin = 'center center';
-            return;
-        }
-    } catch (e) { /* hardware zoom không hỗ trợ, dùng CSS */ }
-
-    // Fallback: CSS transform zoom (mọi thiết bị đều hỗ trợ)
-    video.style.transform = `scale(${zoom})`;
-    video.style.transformOrigin = 'center center';
-}
 
 // ===== NÚT BẮT ĐẦU QUÉT =====
 startButton.addEventListener('click', startRandomSelection);

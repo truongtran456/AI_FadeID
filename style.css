@@ -150,7 +150,7 @@ body {
     text-shadow: 0 0 8px #0f0;
 }
 
-#scanDuration, #zoomRange {
+#scanDuration {
     width: 100px;
     height: 6px;
     background: linear-gradient(90deg, #0ff 0%, #0f0 100%);
@@ -160,8 +160,7 @@ body {
     box-shadow: 0 0 6px rgba(0,255,255,0.5);
 }
 
-#scanDuration::-webkit-slider-thumb,
-#zoomRange::-webkit-slider-thumb {
+#scanDuration::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
@@ -172,8 +171,7 @@ body {
     box-shadow: 0 0 8px #0ff;
 }
 
-#scanDuration::-moz-range-thumb,
-#zoomRange::-moz-range-thumb {
+#scanDuration::-moz-range-thumb {
     width: 16px;
     height: 16px;
     background: #0ff;
