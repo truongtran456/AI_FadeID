@@ -24,16 +24,160 @@ let availableCameras = [];
 
 // ===== ÂM THANH (lazy-init để tránh bị block trên iOS) =====
 let audioContext = null;
+let suspenseMusicNodes = []; // Lưu nodes nhạc hồi hộp để stop được
 
 function getAudioContext() {
     if (!audioContext) {
         audioContext = new (window.AudioContext || (window).webkitAudioContext)();
     }
-    // Resume nếu bị suspended (iOS Safari yêu cầu user gesture)
     if (audioContext.state === 'suspended') {
         audioContext.resume();
     }
     return audioContext;
+}
+
+// ===== NHẠC HỒI HỘP (khi bắt đầu quét) =====
+// Melody: "ù ú u ù ù ụ" kiểu trống hồi hộp tăng dần
+function startSuspenseMusic(duration) {
+    try {
+        const ac = getAudioContext();
+        suspenseMusicNodes = [];
+
+        // Nốt nhạc hồi hộp: pattern lặp lại, tăng tốc dần
+        // Dùng tần số thấp tạo cảm giác căng thẳng
+        const baseNotes = [130, 146, 130, 146, 155, 130, 146, 155, 164, 174];
+        const totalBeats = Math.floor(duration / 1000 * 8); // 8 beats/giây
+        
+        for (let i = 0; i < totalBeats; i++) {
+            // Tốc độ tăng dần: đầu chậm, cuối nhanh
+            const progress = i / totalBeats;
+            const beatInterval = duration / 1000 / (4 + progress * 8); // 4→12 beats/s
+            const startTime = ac.currentTime + i * beatInterval * (1 - progress * 0.3);
+            
+            if (startTime > ac.currentTime + duration / 1000) break;
+
+            const note = baseNotes[i % baseNotes.length];
+            // Cuối melody: tăng pitch nhanh
+            const freq = note * (1 + progress * 0.5);
+
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            // Thêm chút reverb bằng delay
+            const delay = ac.createDelay(0.1);
+            delay.delayTime.value = 0.05;
+
+            osc.connect(gain);
+            gain.connect(delay);
+            delay.connect(ac.destination);
+            gain.connect(ac.destination);
+
+            osc.type = i % 3 === 0 ? 'sawtooth' : 'sine';
+            osc.frequency.value = freq;
+
+            const vol = 0.15 + progress * 0.2;
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(vol, startTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + beatInterval * 0.8);
+
+            osc.start(startTime);
+            osc.stop(startTime + beatInterval);
+            suspenseMusicNodes.push(osc);
+        }
+
+        // Drum kick pattern (tiếng trống thình thịch)
+        for (let i = 0; i < totalBeats * 2; i++) {
+            const progress = i / (totalBeats * 2);
+            const beatInterval = duration / 1000 / (4 + progress * 8);
+            const startTime = ac.currentTime + i * beatInterval * (1 - progress * 0.3);
+
+            if (startTime > ac.currentTime + duration / 1000) break;
+            if (i % 2 !== 0) continue; // Chỉ đánh beat chẵn
+
+            const bufSize = ac.sampleRate * 0.1;
+            const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let j = 0; j < bufSize; j++) {
+                data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.1));
+            }
+            const src = ac.createBufferSource();
+            src.buffer = buf;
+
+            const kickGain = ac.createGain();
+            const kickVol = (0.2 + progress * 0.3);
+            kickGain.gain.setValueAtTime(kickVol, startTime);
+            kickGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+
+            src.connect(kickGain);
+            kickGain.connect(ac.destination);
+            src.start(startTime);
+            suspenseMusicNodes.push(src);
+        }
+
+    } catch (e) { console.warn('Audio error:', e); }
+}
+
+function stopSuspenseMusic() {
+    suspenseMusicNodes.forEach(node => {
+        try { node.stop(); } catch (e) {}
+    });
+    suspenseMusicNodes = [];
+}
+
+// ===== ÂM THANH VUI NHỘN KHI RA KẾT QUẢ =====
+// Kiểu kèn "ta-daaaa!" hài hước
+function playFanfare() {
+    try {
+        const ac = getAudioContext();
+
+        // Melody ta-da: Sol Sol Sol Mi-b (kiểu kèn thắng)
+        const notes = [
+            { freq: 392, dur: 0.12, start: 0.0 },   // Sol
+            { freq: 392, dur: 0.12, start: 0.13 },   // Sol
+            { freq: 392, dur: 0.12, start: 0.26 },   // Sol
+            { freq: 311, dur: 0.35, start: 0.39 },   // Mi-b (bất ngờ hài)
+            { freq: 392, dur: 0.5,  start: 0.76 },   // Sol (kéo dài)
+        ];
+
+        notes.forEach(n => {
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.connect(gain);
+            gain.connect(ac.destination);
+
+            osc.type = 'square'; // Âm kèn
+            osc.frequency.value = n.freq;
+
+            const t = ac.currentTime + n.start;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.35, t + 0.02);
+            gain.gain.setValueAtTime(0.35, t + n.dur - 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + n.dur);
+
+            osc.start(t);
+            osc.stop(t + n.dur + 0.05);
+        });
+
+        // Thêm tiếng "wahwah" hài hước phía sau
+        setTimeout(() => {
+            try {
+                const wahNotes = [523, 494, 466, 440, 415]; // Đi xuống kiểu buồn cười
+                wahNotes.forEach((freq, i) => {
+                    const osc = ac.createOscillator();
+                    const gain = ac.createGain();
+                    osc.connect(gain);
+                    gain.connect(ac.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.value = freq;
+                    const t = ac.currentTime + i * 0.1;
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+                    osc.start(t);
+                    osc.stop(t + 0.2);
+                });
+            } catch (e) {}
+        }, 1400);
+
+    } catch (e) { console.warn('Audio error:', e); }
 }
 
 function playBeep() {
@@ -49,7 +193,7 @@ function playBeep() {
         gain.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.1);
         osc.start(ac.currentTime);
         osc.stop(ac.currentTime + 0.1);
-    } catch (e) { /* bỏ qua lỗi âm thanh */ }
+    } catch (e) { }
 }
 
 function playTing() {
@@ -65,7 +209,7 @@ function playTing() {
         gain.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.3);
         osc.start(ac.currentTime);
         osc.stop(ac.currentTime + 0.3);
-    } catch (e) { /* bỏ qua lỗi âm thanh */ }
+    } catch (e) { }
 }
 
 // ===== PHÁT HIỆN THIẾT BỊ =====
@@ -443,6 +587,7 @@ async function startRandomSelection() {
     statusElement.style.color = '#f00';
 
     playBeep();
+    startSuspenseMusic(scanDuration);
 
     scanTimerHorizontal.style.display = 'block';
     scanTimerFillHorizontal.style.width = '0%';
@@ -539,7 +684,8 @@ async function startRandomSelection() {
 
 // ===== KẾT THÚC VÀ HIỂN THỊ KẾT QUẢ =====
 function finishSelection(finalIndex) {
-    playTing();
+    stopSuspenseMusic();
+    playFanfare();
 
     if (detections.length === 0) {
         alert('⚠️ Không còn khuôn mặt nào trong khung hình!');
