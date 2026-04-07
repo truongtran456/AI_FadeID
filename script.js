@@ -186,10 +186,12 @@ async function startCamera(deviceIdOrFacingMode = null) {
         const deviceInfo = detectDeviceType();
         let constraints;
 
-        // Luôn yêu cầu landscape (width > height) để bao phủ chiều ngang lớp học
+        // Luôn yêu cầu landscape với độ phân giải tối đa thiết bị hỗ trợ
+        // Dùng số rất lớn → browser tự chọn max resolution của thiết bị đó
         const landscapeVideo = {
-            width:  { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
+            width:  { ideal: 99999 },
+            height: { ideal: 99999 },
+            aspectRatio: { ideal: 16/9 },
             frameRate: { ideal: 30 }
         };
 
@@ -207,8 +209,7 @@ async function startCamera(deviceIdOrFacingMode = null) {
             constraints = {
                 video: {
                     deviceId: deviceIdOrFacingMode ? { exact: deviceIdOrFacingMode } : undefined,
-                    ...landscapeVideo,
-                    frameRate: { ideal: 30, max: 60 }
+                    ...landscapeVideo
                 }
             };
             console.log('💻 Desktop mode, deviceId:', deviceIdOrFacingMode);
