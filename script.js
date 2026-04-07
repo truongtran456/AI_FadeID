@@ -381,20 +381,21 @@ async function startCamera(deviceIdOrFacingMode = null) {
 
         return new Promise((resolve) => {
             video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                console.log(`✅ Camera: ${video.videoWidth}x${video.videoHeight}`);
-                // CSS filter hợp lệ (không dùng sharpen() vì không tồn tại)
+                // Canvas match đúng kích thước hiển thị của container, không phải video resolution
+                const container = video.parentElement;
+                canvas.width = container.clientWidth || video.videoWidth;
+                canvas.height = container.clientHeight || video.videoHeight;
+                console.log(`✅ Camera: ${video.videoWidth}x${video.videoHeight}, Canvas: ${canvas.width}x${canvas.height}`);
                 video.style.filter = 'contrast(1.2) brightness(1.08) saturate(1.15)';
                 statusElement.textContent = `✅ Camera: ${settings.width || video.videoWidth}x${settings.height || video.videoHeight} @ ${Math.round(settings.frameRate || 30)}fps`;
                 statusElement.style.color = '#0f0';
                 resolve();
             };
-            // Timeout phòng trường hợp onloadedmetadata không kích hoạt
             setTimeout(() => {
                 if (video.videoWidth) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    const container = video.parentElement;
+                    canvas.width = container.clientWidth || video.videoWidth;
+                    canvas.height = container.clientHeight || video.videoHeight;
                 }
                 resolve();
             }, 3000);
@@ -474,16 +475,19 @@ async function detectAtScale(sourceVideo, scale) {
 
     const results = await faceapi.detectAllFaces(offscreen, options);
 
-    // Chuyển tọa độ về không gian video gốc
+    // Chuyển tọa độ: video space → canvas display space
+    const scaleX = canvas.width / vw;
+    const scaleY = canvas.height / vh;
+
     return results.map(det => {
         const b = det.box;
         return {
             score: det.score,
             box: {
-                x: b.x / scale,
-                y: b.y / scale,
-                width: b.width / scale,
-                height: b.height / scale
+                x: (b.x / scale) * scaleX,
+                y: (b.y / scale) * scaleY,
+                width: (b.width / scale) * scaleX,
+                height: (b.height / scale) * scaleY
             }
         };
     });
@@ -734,20 +738,30 @@ function finishSelection(finalIndex) {
 }
 
 // ===== CROP KHUÔN MẶT =====
+// expandedBox ở canvas display space → cần convert về video space để crop đúng
 function cropFace(expandedBox) {
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
 
+    // Scale ngược từ canvas display → video resolution
+    const scaleX = video.videoWidth / canvas.width;
+    const scaleY = video.videoHeight / canvas.height;
+
+    const cropX = expandedBox.x * scaleX;
+    const cropY = expandedBox.y * scaleY;
+    const cropW = expandedBox.width * scaleX;
+    const cropH = expandedBox.height * scaleY;
+
     const zoomFactor = 1.5;
-    tempCanvas.width = Math.round(expandedBox.width * zoomFactor);
-    tempCanvas.height = Math.round(expandedBox.height * zoomFactor);
+    tempCanvas.width = Math.round(cropW * zoomFactor);
+    tempCanvas.height = Math.round(cropH * zoomFactor);
 
     tempCtx.imageSmoothingEnabled = true;
     tempCtx.imageSmoothingQuality = 'high';
 
     tempCtx.drawImage(
         video,
-        expandedBox.x, expandedBox.y, expandedBox.width, expandedBox.height,
+        cropX, cropY, cropW, cropH,
         0, 0, tempCanvas.width, tempCanvas.height
     );
 
@@ -790,6 +804,16 @@ scanDurationSlider.addEventListener('input', (e) => {
     scanDuration = value * 1000;
     durationValue.textContent = value;
 });
+
+// ===== RESIZE CANVAS KHI WINDOW THAY ĐỔI =====
+function resizeCanvas() {
+    const container = video.parentElement;
+    if (container && container.clientWidth > 0) {
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
 
 // ===== NÚT BẮT ĐẦU QUÉT =====
 startButton.addEventListener('click', startRandomSelection);

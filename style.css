@@ -99,8 +99,7 @@ body {
 #video {
     width: 100%;
     height: 100%;
-    /* contain = hiển thị toàn bộ video, không crop */
-    object-fit: contain;
+    object-fit: fill;
     background: #000;
 }
 
