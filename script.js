@@ -456,14 +456,8 @@ async function detectAtScale(sourceVideo, scale) {
     const vw = sourceVideo.videoWidth;
     const vh = sourceVideo.videoHeight;
 
-    // Tính vùng nhìn thấy sau khi CSS zoom (crop vào giữa)
-    const visibleW = vw / currentZoom;
-    const visibleH = vh / currentZoom;
-    const offsetX = (vw - visibleW) / 2;
-    const offsetY = (vh - visibleH) / 2;
-
-    const w = Math.round(visibleW * scale);
-    const h = Math.round(visibleH * scale);
+    const w = Math.round(vw * scale);
+    const h = Math.round(vh * scale);
 
     const offscreen = document.createElement('canvas');
     offscreen.width = w;
@@ -471,8 +465,7 @@ async function detectAtScale(sourceVideo, scale) {
     const offCtx = offscreen.getContext('2d');
 
     offCtx.filter = 'contrast(1.3) brightness(1.1)';
-    // Chỉ vẽ vùng đang nhìn thấy (sau zoom)
-    offCtx.drawImage(sourceVideo, offsetX, offsetY, visibleW, visibleH, 0, 0, w, h);
+    offCtx.drawImage(sourceVideo, 0, 0, vw, vh, 0, 0, w, h);
 
     const options = new faceapi.SsdMobilenetv1Options({
         minConfidence: 0.25,
@@ -487,8 +480,8 @@ async function detectAtScale(sourceVideo, scale) {
         return {
             score: det.score,
             box: {
-                x: (b.x / scale) + offsetX,
-                y: (b.y / scale) + offsetY,
+                x: b.x / scale,
+                y: b.y / scale,
                 width: b.width / scale,
                 height: b.height / scale
             }
