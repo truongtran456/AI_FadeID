@@ -6,36 +6,37 @@
 
 body {
     font-family: 'Courier New', monospace;
-    background: linear-gradient(135deg, #000 0%, #0a0a1a 50%, #000 100%);
+    background: #000;
     color: #0ff;
-    overflow: hidden;
+    /* Luôn dùng toàn màn hình, không scroll */
+    width: 100vw;
     height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: 4px;
+    gap: 4px;
 }
 
-/* Header với hiệu ứng Cyberpunk */
+/* Header */
 .header {
     text-align: center;
-    padding: 10px;
-    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.8) 100%);
+    padding: 6px 10px;
+    background: rgba(0,255,255,0.08);
     border: 2px solid #0ff;
     border-radius: 8px;
-    box-shadow: 0 0 20px #0ff, inset 0 0 15px rgba(0, 255, 255, 0.2);
-    margin-bottom: 6px;
+    box-shadow: 0 0 15px #0ff;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .header::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(0,255,255,0.08), transparent);
     animation: shine 3s infinite;
 }
 
@@ -45,9 +46,9 @@ body {
 }
 
 .header h1 {
-    font-size: 1.6em;
+    font-size: clamp(0.9em, 2.5vw, 1.4em);
     color: #0ff;
-    text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
     letter-spacing: 3px;
     animation: glowPulse 2s ease-in-out infinite;
     position: relative;
@@ -56,233 +57,22 @@ body {
 }
 
 @keyframes glowPulse {
-    0%, 100% { 
-        text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
-        transform: scale(1);
-    }
-    50% { 
-        text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 45px #0ff;
-        transform: scale(1.01);
-    }
+    0%, 100% { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+    50% { text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
 }
 
-/* Container chính - XÓA ĐI vì giờ full màn hình */
-
-/* Camera Full màn hình */
-.camera-section-full {
-    flex: 1;
-    position: relative;
-    border: 2px solid #f00;
-    box-shadow: 0 0 15px #f00, inset 0 0 15px rgba(255, 0, 0, 0.15);
-    border-radius: 8px;
-    overflow: hidden;
-    background: #000;
-    margin: 6px 8px;
-}
-
-/* Chọn Camera - Trong button container */
-.camera-selector {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.camera-selector label {
-    color: #0ff;
-    font-size: 0.9em;
-    font-weight: bold;
-    text-shadow: 0 0 8px #0ff;
-    white-space: nowrap;
-}
-
-#cameraSelect {
-    padding: 8px 12px;
-    font-size: 0.95em;
-    font-family: 'Courier New', monospace;
-    background: linear-gradient(135deg, #000 0%, #111 100%);
-    color: #0ff;
-    border: 2px solid #0ff;
-    border-radius: 6px;
-    cursor: pointer;
-    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
-    outline: none;
-    min-width: 150px;
-}
-
-#cameraSelect:hover {
-    background: linear-gradient(135deg, #111 0%, #222 100%);
-    box-shadow: 0 0 12px #0ff;
-}
-
-#cameraSelect option {
-    background: #000;
-    color: #0ff;
-    padding: 8px;
-}
-
-#video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: contrast(1.15) brightness(1.05) saturate(1.1);
-}
-
-#canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-/* Khung kết quả bên phải - XÓA ĐI */
-/* Không cần nữa vì giờ full màn hình */
-
-/* Nút bấm và thanh thời gian */
-.button-container {
-    padding: 8px;
-    text-align: center;
-    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.8) 100%);
-    border: 2px solid #0ff;
-    border-radius: 8px;
-    box-shadow: 0 0 15px #0ff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    flex-wrap: wrap;
-    margin-top: 6px;
-}
-
-/* Điều chỉnh thời gian quét */
-.time-control {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-}
-
-.time-control label {
-    color: #0ff;
-    font-size: 0.9em;
-    text-shadow: 0 0 8px #0ff;
-    font-weight: bold;
-}
-
-#durationValue {
-    color: #0f0;
-    font-weight: bold;
-    font-size: 1.1em;
-    text-shadow: 0 0 8px #0f0, 0 0 15px #0f0;
-}
-
-/* Slider tùy chỉnh */
-#scanDuration, #zoomRange {
-    width: 160px;
-    height: 7px;
-    background: linear-gradient(90deg, #0ff 0%, #0f0 100%);
-    border-radius: 5px;
-    outline: none;
-    opacity: 0.9;
-    transition: opacity 0.2s;
-    cursor: pointer;
-    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
-}
-
-#scanDuration:hover, #zoomRange:hover {
-    opacity: 1;
-    box-shadow: 0 0 12px #0ff;
-}
-
-#scanDuration::-webkit-slider-thumb, #zoomRange::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    background: #0ff;
-    border: 2px solid #000;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 8px #0ff, 0 0 15px #0ff;
-}
-
-#scanDuration::-moz-range-thumb, #zoomRange::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    background: #0ff;
-    border: 2px solid #000;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 8px #0ff, 0 0 15px #0ff;
-}
-
-#startButton {
-    padding: 10px 35px;
-    font-size: 1.15em;
-    font-weight: bold;
-    color: #000;
-    background: linear-gradient(135deg, #0ff 0%, #00ffaa 100%);
-    border: 2px solid #0ff;
-    border-radius: 8px;
-    cursor: pointer;
-    text-shadow: none;
-    box-shadow: 0 0 15px #0ff, 0 0 25px #0ff;
-    transition: all 0.3s;
-    font-family: 'Courier New', monospace;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-#startButton:hover:not(:disabled) {
-    background: linear-gradient(135deg, #00ffaa 0%, #0ff 100%);
-    box-shadow: 0 0 30px #0ff, 0 0 50px #0ff;
-    transform: scale(1.05) translateY(-2px);
-}
-
-#startButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Thanh thời gian quét ngang */
-.scan-timer-horizontal {
-    width: 220px;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.9);
-    border: 2px solid #0ff;
-    border-radius: 6px;
-    overflow: hidden;
-    position: relative;
-    display: none;
-    box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
-}
-
-.scan-timer-fill-horizontal {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #0ff 0%, #0f0 50%, #ff0 100%);
-    box-shadow: 0 0 20px #0ff, 0 0 30px #0ff;
-    transition: width 0.1s linear;
-    animation: scanPulse 0.5s ease-in-out infinite;
-}
-
-@keyframes scanPulse {
-    0%, 100% { box-shadow: 0 0 20px #0ff, 0 0 30px #0ff; }
-    50% { box-shadow: 0 0 30px #0ff, 0 0 50px #0ff, 0 0 70px #0ff; }
-}
-
-/* Status message */
+/* Status */
 .status {
     text-align: center;
-    padding: 5px;
+    padding: 3px;
     color: #f00;
-    text-shadow: 0 0 10px #f00;
-    font-size: 0.95em;
-    min-height: 25px;
+    text-shadow: 0 0 8px #f00;
+    font-size: 0.85em;
+    min-height: 20px;
     font-weight: bold;
+    flex-shrink: 0;
 }
 
-/* Loading animation */
 .loading {
     color: #0ff;
     animation: blink 1s infinite;
@@ -293,19 +83,203 @@ body {
     25%, 75% { opacity: 0.3; }
 }
 
-/* Màn hình zoom kết quả */
-.result-overlay {
-    position: fixed;
+/* ===== CAMERA: chiếm hết không gian còn lại ===== */
+.camera-section-full {
+    flex: 1;
+    position: relative;
+    border: 2px solid #f00;
+    box-shadow: 0 0 15px #f00;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    /* Đảm bảo không bị co lại */
+    min-height: 0;
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    /* contain = hiển thị toàn bộ video, không crop */
+    object-fit: contain;
+    background: #000;
+}
+
+#canvas {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle, rgba(0, 20, 40, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+}
+
+/* ===== CONTROLS: 1 hàng ngang gọn ở dưới ===== */
+.button-container {
+    flex-shrink: 0;
+    padding: 6px 8px;
+    background: rgba(0,255,255,0.08);
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    box-shadow: 0 0 12px #0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.time-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.time-control label {
+    color: #0ff;
+    font-size: 0.8em;
+    text-shadow: 0 0 6px #0ff;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+#durationValue, #zoomValue {
+    color: #0f0;
+    font-weight: bold;
+    text-shadow: 0 0 8px #0f0;
+}
+
+#scanDuration, #zoomRange {
+    width: 100px;
+    height: 6px;
+    background: linear-gradient(90deg, #0ff 0%, #0f0 100%);
+    border-radius: 5px;
+    outline: none;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(0,255,255,0.5);
+}
+
+#scanDuration::-webkit-slider-thumb,
+#zoomRange::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #0ff;
+    border: 2px solid #000;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px #0ff;
+}
+
+#scanDuration::-moz-range-thumb,
+#zoomRange::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #0ff;
+    border: 2px solid #000;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px #0ff;
+}
+
+#startButton {
+    padding: 8px 20px;
+    font-size: clamp(0.85em, 2vw, 1.1em);
+    font-weight: bold;
+    color: #000;
+    background: linear-gradient(135deg, #0ff 0%, #00ffaa 100%);
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 15px #0ff;
+    transition: all 0.3s;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+#startButton:hover:not(:disabled) {
+    box-shadow: 0 0 30px #0ff;
+    transform: scale(1.05);
+}
+
+#startButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Thanh tiến trình quét */
+.scan-timer-horizontal {
+    width: 120px;
+    height: 22px;
+    background: rgba(0,0,0,0.9);
+    border: 2px solid #0ff;
+    border-radius: 6px;
+    overflow: hidden;
+    display: none;
+    flex-shrink: 0;
+    box-shadow: 0 0 10px rgba(0,255,255,0.5);
+}
+
+.scan-timer-fill-horizontal {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #0ff 0%, #0f0 50%, #ff0 100%);
+    transition: width 0.1s linear;
+    animation: scanPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes scanPulse {
+    0%, 100% { box-shadow: 0 0 15px #0ff; }
+    50% { box-shadow: 0 0 30px #0ff; }
+}
+
+/* Camera selector */
+.camera-selector {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.camera-selector label {
+    color: #0ff;
+    font-size: 1em;
+}
+
+#cameraSelect {
+    padding: 5px 8px;
+    font-size: 0.8em;
+    font-family: 'Courier New', monospace;
+    background: #000;
+    color: #0ff;
+    border: 2px solid #0ff;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(0,255,255,0.5);
+    outline: none;
+    max-width: 140px;
+}
+
+#cameraSelect option {
+    background: #000;
+    color: #0ff;
+}
+
+/* ===== KẾT QUẢ OVERLAY ===== */
+.result-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, rgba(0,20,40,0.95) 0%, rgba(0,0,0,0.98) 100%);
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    animation: fadeIn 0.5s ease-in-out;
+    animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
@@ -315,7 +289,8 @@ body {
 
 .result-content {
     text-align: center;
-    animation: zoomIn 0.5s ease-out;
+    animation: zoomIn 0.4s ease-out;
+    padding: 10px;
 }
 
 @keyframes zoomIn {
@@ -325,60 +300,45 @@ body {
 
 .result-title {
     color: #0ff;
-    font-size: 2em;
-    text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 45px #0ff;
-    margin-bottom: 20px;
+    font-size: clamp(1.2em, 3vw, 2em);
+    text-shadow: 0 0 15px #0ff, 0 0 30px #0ff;
+    margin-bottom: 15px;
     letter-spacing: 4px;
     font-weight: bold;
-    animation: titlePulse 2s ease-in-out infinite;
-}
-
-@keyframes titlePulse {
-    0%, 100% { 
-        text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 45px #0ff;
-    }
-    50% { 
-        text-shadow: 0 0 25px #0ff, 0 0 50px #0ff, 0 0 75px #0ff;
-    }
 }
 
 .result-image-large {
-    max-width: 480px;
-    max-height: 380px;
+    max-width: min(480px, 80vw);
+    max-height: min(380px, 50vh);
     border: 4px solid #0f0;
-    box-shadow: 0 0 25px #0f0, 0 0 50px #0f0, 0 0 75px rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 25px #0f0, 0 0 50px #0f0;
     border-radius: 12px;
-    margin-bottom: 25px;
-    animation: zoomInImage 0.6s ease-out;
+    margin-bottom: 20px;
+    animation: zoomInImage 0.5s ease-out;
 }
 
 @keyframes zoomInImage {
-    from {
-        opacity: 0;
-        transform: scale(0.7) rotate(-5deg);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-    }
+    from { opacity: 0; transform: scale(0.7) rotate(-5deg); }
+    to { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 .result-buttons {
     display: flex;
-    gap: 20px;
+    gap: 15px;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .btn-celebrate {
-    padding: 13px 38px;
-    font-size: 1.25em;
+    padding: 10px 28px;
+    font-size: clamp(0.9em, 2vw, 1.2em);
     font-weight: bold;
     color: #000;
     background: linear-gradient(135deg, #0f0 0%, #00ff88 100%);
     border: 3px solid #0f0;
     border-radius: 10px;
     cursor: pointer;
-    box-shadow: 0 0 20px #0f0, 0 0 35px #0f0;
+    box-shadow: 0 0 20px #0f0;
     transition: all 0.3s;
     font-family: 'Courier New', monospace;
     text-transform: uppercase;
@@ -386,21 +346,20 @@ body {
 }
 
 .btn-celebrate:hover {
-    background: linear-gradient(135deg, #00ff88 0%, #0f0 100%);
-    box-shadow: 0 0 30px #0f0, 0 0 50px #0f0;
-    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 0 35px #0f0;
+    transform: scale(1.05);
 }
 
 .btn-continue {
-    padding: 13px 38px;
-    font-size: 1.25em;
+    padding: 10px 28px;
+    font-size: clamp(0.9em, 2vw, 1.2em);
     font-weight: bold;
     color: #000;
     background: linear-gradient(135deg, #0ff 0%, #00aaff 100%);
     border: 3px solid #0ff;
     border-radius: 10px;
     cursor: pointer;
-    box-shadow: 0 0 20px #0ff, 0 0 35px #0ff;
+    box-shadow: 0 0 20px #0ff;
     transition: all 0.3s;
     font-family: 'Courier New', monospace;
     text-transform: uppercase;
@@ -408,9 +367,6 @@ body {
 }
 
 .btn-continue:hover {
-    background: linear-gradient(135deg, #00aaff 0%, #0ff 100%);
-    box-shadow: 0 0 30px #0ff, 0 0 50px #0ff;
-    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 0 35px #0ff;
+    transform: scale(1.05);
 }
-
-

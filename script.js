@@ -189,34 +189,28 @@ async function startCamera(deviceIdOrFacingMode = null) {
         const deviceInfo = detectDeviceType();
         let constraints;
 
+        // Luôn yêu cầu landscape (width > height) để bao phủ chiều ngang lớp học
+        const landscapeVideo = {
+            width:  { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            frameRate: { ideal: 30 }
+        };
+
         if (deviceIdOrFacingMode === 'environment' || deviceIdOrFacingMode === 'user') {
-            // Mobile/Tablet/iPad: facingMode (KHÔNG dùng exact trên iOS để tránh lỗi)
-            if (deviceInfo.isIOS) {
-                constraints = {
-                    video: {
-                        facingMode: deviceIdOrFacingMode,
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
-                };
-            } else {
-                constraints = {
-                    video: {
-                        facingMode: { exact: deviceIdOrFacingMode },
-                        width: { ideal: 1920, min: 1280 },
-                        height: { ideal: 1080, min: 720 },
-                        frameRate: { ideal: 30 }
-                    }
-                };
-            }
+            // Mobile/Tablet/iPad: không dùng exact trên iOS
+            constraints = {
+                video: {
+                    facingMode: deviceInfo.isIOS ? deviceIdOrFacingMode : { exact: deviceIdOrFacingMode },
+                    ...landscapeVideo
+                }
+            };
             console.log('📱 Mobile/Tablet mode:', deviceIdOrFacingMode);
         } else {
             // Desktop/Laptop: deviceId
             constraints = {
                 video: {
                     deviceId: deviceIdOrFacingMode ? { exact: deviceIdOrFacingMode } : undefined,
-                    width: { ideal: 1920, min: 1280 },
-                    height: { ideal: 1080, min: 720 },
+                    ...landscapeVideo,
                     frameRate: { ideal: 30, max: 60 }
                 }
             };

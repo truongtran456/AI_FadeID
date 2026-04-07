@@ -2,58 +2,52 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>GỌI TÊN AI - Cyberpunk Edition</title>
-    
-    <!-- Load CSS -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Load face-api.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 </head>
 <body>
+    <!-- Header -->
     <div class="header">
         <h1>⚡ GỌI TÊN SIÊU CẤP AI ⚡</h1>
     </div>
 
     <div class="status" id="status">Đang khởi động AI...</div>
 
-    <!-- Camera Full màn hình -->
+    <!-- Camera chiếm toàn bộ chiều ngang -->
     <div class="camera-section-full">
         <video id="video" autoplay muted playsinline></video>
         <canvas id="canvas"></canvas>
     </div>
 
+    <!-- Controls gọn ở dưới, 1 hàng ngang -->
     <div class="button-container">
-        <!-- Điều chỉnh thời gian quét -->
         <div class="time-control">
-            <label for="scanDuration">⏱️ Thời gian quét: <span id="durationValue">3</span>s</label>
+            <label for="scanDuration">⏱️ <span id="durationValue">3</span>s</label>
             <input type="range" id="scanDuration" min="1" max="10" value="3" step="1">
         </div>
-        
+
         <button id="startButton" disabled>BẮT ĐẦU QUÉT</button>
-        
-        <!-- Thanh thời gian quét ngang -->
+
         <div class="scan-timer-horizontal" id="scanTimerHorizontal">
             <div class="scan-timer-fill-horizontal" id="scanTimerFillHorizontal"></div>
         </div>
 
-        <!-- Zoom -->
         <div class="time-control">
-            <label for="zoomRange">🔍 Zoom: <span id="zoomValue">1.0</span>x</label>
+            <label for="zoomRange">🔍 <span id="zoomValue">1.0</span>x</label>
             <input type="range" id="zoomRange" min="1.0" max="5.0" value="1.0" step="0.1">
         </div>
 
-        <!-- Chọn Camera - Bên phải nút quét -->
-        <div class="camera-selector"></div>
-            <label for="cameraSelect">📹 Camera:</label>
+        <div class="camera-selector">
+            <label for="cameraSelect">📹</label>
             <select id="cameraSelect">
                 <option value="">Đang tải...</option>
             </select>
         </div>
     </div>
 
-    <!-- Màn hình zoom kết quả -->
+    <!-- Màn hình kết quả -->
     <div class="result-overlay" id="resultOverlay">
         <div class="result-content">
             <div class="result-title">••• BIOMETRIC RESULT •••</div>
@@ -65,7 +59,6 @@
         </div>
     </div>
 
-    <!-- Load JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>
