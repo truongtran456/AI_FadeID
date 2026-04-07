@@ -695,7 +695,21 @@ async function applyZoom(zoom) {
 // ===== NÚT BẮT ĐẦU QUÉT =====
 startButton.addEventListener('click', startRandomSelection);
 
-// ===== LẮNG NGHE THIẾT BỊ MỚI (Camera ngoài cắm vào) =====
+// ===== LẮNG NGHE XOAY MÀN HÌNH (Mobile/Tablet) =====
+screen.orientation
+    ? screen.orientation.addEventListener('change', handleOrientationChange)
+    : window.addEventListener('orientationchange', handleOrientationChange);
+
+async function handleOrientationChange() {
+    if (!selectedDeviceId) return;
+    // Đợi browser hoàn tất xoay xong rồi mới restart camera
+    setTimeout(async () => {
+        console.log('🔄 Xoay màn hình, restart camera...');
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        await startCamera(selectedDeviceId);
+        detectFaces();
+    }, 300);
+}
 navigator.mediaDevices.addEventListener('devicechange', async () => {
     console.log('🔌 Thiết bị thay đổi, cập nhật danh sách camera...');
     const prevSelected = selectedDeviceId;
