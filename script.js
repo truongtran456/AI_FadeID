@@ -52,6 +52,18 @@ scanMusic.loop = true;
 const resultMusic = new Audio('result.mp3');
 resultMusic.loop = false;
 
+// Unlock audio trên iOS/Chrome khi user tap lần đầu
+let audioUnlocked = false;
+function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    // Play rồi pause ngay để browser cho phép play sau này
+    scanMusic.play().then(() => scanMusic.pause()).catch(() => {});
+    resultMusic.play().then(() => resultMusic.pause()).catch(() => {});
+}
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
+
 function startSuspenseMusic() {
     try {
         scanMusic.currentTime = 0;
