@@ -157,41 +157,44 @@ async function startCamera(deviceIdOrMode) {
         const dev = getDeviceInfo();
         const isFacingMode = deviceIdOrMode === 'environment' || deviceIdOrMode === 'user';
 
-        // Constraints: luôn ưu tiên landscape (width > height)
-        let videoConstraints;
+        // Thử lần lượt từ tốt nhất → đơn giản nhất
+        const attempts = [];
+
         if (isFacingMode) {
-            videoConstraints = {
-                facingMode: (dev.isIOS) ? deviceIdOrMode : { exact: deviceIdOrMode },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                aspectRatio: { ideal: 16/9 }
-            };
+            // Mobile/Tablet
+            if (!dev.isIOS) {
+                attempts.push({ facingMode: { exact: deviceIdOrMode }, width: { ideal: 1920 }, height: { ideal: 1080 } });
+            }
+            attempts.push({ facingMode: deviceIdOrMode, width: { ideal: 1920 }, height: { ideal: 1080 } });
+            attempts.push({ facingMode: deviceIdOrMode });
         } else {
-            videoConstraints = {
-                deviceId: deviceIdOrMode ? { exact: deviceIdOrMode } : undefined,
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                aspectRatio: { ideal: 16/9 }
-            };
+            // Desktop/Laptop — KHÔNG dùng exact deviceId trong fallback vì dễ fail
+            if (deviceIdOrMode) {
+                attempts.push({ deviceId: { exact: deviceIdOrMode }, width: { ideal: 1920 }, height: { ideal: 1080 } });
+                attempts.push({ deviceId: { exact: deviceIdOrMode } });
+            }
+            // Fallback cuối: bất kỳ camera nào
+            attempts.push({ width: { ideal: 1280 }, height: { ideal: 720 } });
+            attempts.push(true);
         }
 
-        let stream;
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-        } catch(e) {
-            // Fallback đơn giản nhất
-            console.warn('Fallback camera:', e.name);
-            const fallback = isFacingMode
-                ? { facingMode: deviceIdOrMode }
-                : (deviceIdOrMode ? { deviceId: { exact: deviceIdOrMode } } : true);
-            stream = await navigator.mediaDevices.getUserMedia({ video: fallback });
+        let stream = null;
+        for (const constraint of attempts) {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: constraint });
+                console.log('✅ Camera OK với constraint:', constraint);
+                break;
+            } catch(e) {
+                console.warn('⚠️ Thử constraint thất bại:', e.name, constraint);
+            }
         }
+
+        if (!stream) throw new Error('Không thể mở camera sau tất cả các lần thử');
 
         video.srcObject = stream;
 
         await new Promise(resolve => {
             video.onloadedmetadata = () => {
-                // Canvas = video resolution → tọa độ detection khớp 1:1
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 const t = stream.getVideoTracks()[0].getSettings();
@@ -199,11 +202,9 @@ async function startCamera(deviceIdOrMode) {
                 statusElement.style.color = '#0f0';
                 resolve();
             };
-            // Safety timeout
             setTimeout(resolve, 4000);
         });
 
-        // Đảm bảo canvas có kích thước nếu timeout fire trước metadata
         if (!canvas.width && video.videoWidth) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
