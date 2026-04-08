@@ -48,22 +48,16 @@ function playBeep() {
 // ===== AUDIO FILES =====
 const scanMusic = new Audio('Scan.m4a');
 scanMusic.loop = true;
+scanMusic.preload = 'auto';
 
 const resultMusic = new Audio('result.mp3');
 resultMusic.loop = false;
-
-// Unlock audio trên iOS/Chrome khi user tap lần đầu
-let audioUnlocked = false;
-function unlockAudio() {
-    if (audioUnlocked) return;
-    audioUnlocked = true;
-    scanMusic.play().then(() => scanMusic.pause()).catch(() => {});
-}
-document.addEventListener('touchstart', unlockAudio, { once: true });
-document.addEventListener('click', unlockAudio, { once: true });
+resultMusic.preload = 'auto';
 
 function startSuspenseMusic() {
     try {
+        resultMusic.pause();
+        resultMusic.currentTime = 0;
         scanMusic.currentTime = 0;
         scanMusic.play().catch(e => console.warn('Scan music:', e));
     } catch(e) {}
@@ -74,13 +68,14 @@ function stopSuspenseMusic() {
         scanMusic.pause();
         scanMusic.currentTime = 0;
     } catch(e) {}
-    // Dọn Web Audio nodes cũ nếu còn
     suspenseNodes.forEach(n => { try { n.stop(); } catch(e) {} });
     suspenseNodes = [];
 }
 
 function playFanfare() {
     try {
+        scanMusic.pause();
+        scanMusic.currentTime = 0;
         resultMusic.currentTime = 0;
         resultMusic.play().catch(e => console.warn('Result music:', e));
     } catch(e) {}
@@ -474,7 +469,11 @@ scanDurationSlider.addEventListener('input', (e) => {
     durationValue.textContent = e.target.value;
 });
 
-startButton.addEventListener('click', startRandomSelection);
+startButton.addEventListener('click', () => {
+    // Unlock cả 2 audio ngay tại user gesture này
+    resultMusic.play().then(() => { resultMusic.pause(); resultMusic.currentTime = 0; }).catch(() => {});
+    startRandomSelection();
+});
 
 // Xoay màn hình → restart camera + đổi text nút
 const orientationHandler = async () => {
