@@ -147,22 +147,23 @@ body {
         align-items: center;
         gap: 14px;
         padding: 10px 6px;
-        width: 105px;
+        width: 100px;
         flex-shrink: 0;
-        overflow-x: visible;
-        overflow-y: auto;
+        overflow: hidden;
         align-self: stretch;
         border-radius: 8px;
     }
 
-    /* Nút quét xoay dọc */
+    /* Nút quét: nằm ngang, chỉ hiện "BẮT ĐẦU" */
     #startButton {
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        padding: 18px 7px;
-        font-size: 0.8em;
-        letter-spacing: 1px;
-        white-space: nowrap;
+        writing-mode: horizontal-tb;
+        padding: 10px 8px;
+        font-size: 0.75em;
+        letter-spacing: 0.5px;
+        white-space: normal;
+        word-break: break-word;
+        width: 90px;
+        text-align: center;
     }
 
     #scanDuration { width: 75px; }

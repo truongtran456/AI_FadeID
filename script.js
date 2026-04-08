@@ -484,9 +484,13 @@ scanDurationSlider.addEventListener('input', (e) => {
 
 startButton.addEventListener('click', startRandomSelection);
 
-// Xoay màn hình → restart camera
+// Xoay màn hình → restart camera + đổi text nút
 const orientationHandler = async () => {
     if (!selectedDeviceId) return;
+    // Đổi text nút theo orientation
+    const isLandscape = window.innerWidth > window.innerHeight;
+    startButton.textContent = isLandscape ? 'BẮT ĐẦU' : 'BẮT ĐẦU QUÉT';
+
     setTimeout(async () => {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         await startCamera(selectedDeviceId);
@@ -509,6 +513,9 @@ navigator.mediaDevices.addEventListener('devicechange', async () => {
 // ===== INIT =====
 async function init() {
     statusElement.textContent = '⚡ Đang khởi động...';
+    // Set text nút theo orientation hiện tại
+    const isLandscape = window.innerWidth > window.innerHeight;
+    startButton.textContent = isLandscape ? 'BẮT ĐẦU' : 'BẮT ĐẦU QUÉT';
     await listCameras();
     await startCamera(selectedDeviceId);
     await loadModels();
