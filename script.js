@@ -20,7 +20,7 @@ let isScanning = false;
 let modelsLoaded = false;
 let animationFrameId = null;
 let selectedDeviceId = null;
-let scanDuration = 3000;
+let scanDuration = 5000;
 
 // ===== AUDIO =====
 let audioCtx = null;
