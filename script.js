@@ -49,27 +49,73 @@ function startSuspenseMusic(duration) {
     try {
         const ac = getAC();
         suspenseNodes = [];
-        const notes = [130, 146, 130, 146, 155, 130, 146, 155, 164, 174];
         const dSec = duration / 1000;
+
+        // ===== FUNNY GOLD TIGER style =====
+        // Melody vui nhộn, nhịp điệu nhanh, kiểu circus/comedy
+        // Nốt: C D E G A (pentatonic vui)
+        const melody = [
+            523, 587, 659, 784, 880,  // C D E G A (oct 5)
+            659, 784, 880, 784, 659,
+            523, 659, 784, 659, 523,
+            587, 659, 784, 880, 1047
+        ];
+
+        // Nhịp cố định 8 nốt/giây, tăng tốc nhẹ ở cuối
         let t = ac.currentTime + 0.05;
         let i = 0;
         while (t < ac.currentTime + dSec) {
             const prog = (t - ac.currentTime) / dSec;
-            const bps = 4 + prog * 10;
+            const bps = 6 + prog * 4; // 6→10 nốt/giây
             const blen = 1 / bps;
+
+            // Kèn trumpet vui (square + detune)
             const o = ac.createOscillator();
             const g = ac.createGain();
             o.connect(g); g.connect(ac.destination);
-            o.type = i % 3 === 0 ? 'sawtooth' : 'sine';
-            o.frequency.value = notes[i % notes.length] * (1 + prog * 0.4);
+            o.type = 'square';
+            o.frequency.value = melody[i % melody.length];
+            o.detune.value = (i % 3) * 5; // Chút detune cho vui
             g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.12 + prog * 0.2, t + 0.015);
-            g.gain.exponentialRampToValueAtTime(0.001, t + blen * 0.75);
+            g.gain.linearRampToValueAtTime(0.18, t + 0.01);
+            g.gain.setValueAtTime(0.18, t + blen * 0.6);
+            g.gain.exponentialRampToValueAtTime(0.001, t + blen * 0.9);
             o.start(t); o.stop(t + blen);
             suspenseNodes.push(o);
+
+            // Bass đệm mỗi 2 nốt
+            if (i % 2 === 0) {
+                const ob = ac.createOscillator();
+                const gb = ac.createGain();
+                ob.connect(gb); gb.connect(ac.destination);
+                ob.type = 'triangle';
+                ob.frequency.value = melody[i % melody.length] / 2;
+                gb.gain.setValueAtTime(0.08, t);
+                gb.gain.exponentialRampToValueAtTime(0.001, t + blen * 1.5);
+                ob.start(t); ob.stop(t + blen * 1.5);
+                suspenseNodes.push(ob);
+            }
+
+            // Hihi cymbal (noise burst) mỗi 4 nốt
+            if (i % 4 === 0) {
+                const bufSize = Math.floor(ac.sampleRate * 0.04);
+                const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let j = 0; j < bufSize; j++) {
+                    data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.3));
+                }
+                const src = ac.createBufferSource();
+                src.buffer = buf;
+                const hg = ac.createGain();
+                hg.gain.setValueAtTime(0.06, t);
+                src.connect(hg); hg.connect(ac.destination);
+                src.start(t);
+                suspenseNodes.push(src);
+            }
+
             t += blen; i++;
         }
-    } catch(e) {}
+    } catch(e) { console.warn('Audio:', e); }
 }
 
 function stopSuspenseMusic() {
@@ -80,18 +126,65 @@ function stopSuspenseMusic() {
 function playFanfare() {
     try {
         const ac = getAC();
-        [[392,0],[392,0.13],[392,0.26],[311,0.39],[392,0.76]].forEach(([freq, start]) => {
+
+        // ===== TIẾNG CƯỜI HÀI TIKTOK style =====
+        // "Wah wah wah" đi xuống + tiếng vỗ tay
+
+        // 1. Tiếng "TA-DA" ngắn trước
+        [[784,0],[784,0.1],[1047,0.2]].forEach(([f, s]) => {
             const o = ac.createOscillator();
             const g = ac.createGain();
             o.connect(g); g.connect(ac.destination);
-            o.type = 'square'; o.frequency.value = freq;
-            const t = ac.currentTime + start;
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.3, t + 0.02);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-            o.start(t); o.stop(t + 0.4);
+            o.type = 'square'; o.frequency.value = f;
+            const t = ac.currentTime + s;
+            g.gain.setValueAtTime(0.25, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+            o.start(t); o.stop(t + 0.15);
         });
-    } catch(e) {}
+
+        // 2. "Wah wah wah" hài hước đi xuống (trombone sad)
+        const wahNotes = [622, 554, 494, 440, 392, 349];
+        wahNotes.forEach((f, i) => {
+            const o = ac.createOscillator();
+            const g = ac.createGain();
+            o.connect(g); g.connect(ac.destination);
+            o.type = 'sawtooth'; o.frequency.value = f;
+            const t = ac.currentTime + 0.5 + i * 0.18;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.28, t + 0.04);
+            g.gain.setValueAtTime(0.28, t + 0.12);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            o.start(t); o.stop(t + 0.25);
+        });
+
+        // 3. Tiếng vỗ tay (noise burst nhanh)
+        for (let i = 0; i < 5; i++) {
+            const bufSize = Math.floor(ac.sampleRate * 0.06);
+            const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let j = 0; j < bufSize; j++) {
+                data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.2));
+            }
+            const src = ac.createBufferSource();
+            src.buffer = buf;
+            const cg = ac.createGain();
+            cg.gain.setValueAtTime(0.3, 0);
+            src.connect(cg); cg.connect(ac.destination);
+            src.start(ac.currentTime + 1.7 + i * 0.12);
+            suspenseNodes.push(src);
+        }
+
+        // 4. Nốt kết vui (ding!)
+        const od = ac.createOscillator();
+        const gd = ac.createGain();
+        od.connect(gd); gd.connect(ac.destination);
+        od.type = 'sine'; od.frequency.value = 1318;
+        const td = ac.currentTime + 2.4;
+        gd.gain.setValueAtTime(0.4, td);
+        gd.gain.exponentialRampToValueAtTime(0.001, td + 0.6);
+        od.start(td); od.stop(td + 0.7);
+
+    } catch(e) { console.warn('Audio:', e); }
 }
 
 // ===== DEVICE DETECTION =====
