@@ -1,14 +1,9 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: 'Courier New', monospace;
     background: #000;
     color: #0ff;
-    /* Luôn dùng toàn màn hình, không scroll */
     width: 100vw;
     height: 100vh;
     overflow: hidden;
@@ -18,7 +13,7 @@ body {
     gap: 4px;
 }
 
-/* Header */
+/* ===== HEADER ===== */
 .header {
     text-align: center;
     padding: 6px 10px;
@@ -30,7 +25,6 @@ body {
     overflow: hidden;
     flex-shrink: 0;
 }
-
 .header::before {
     content: '';
     position: absolute;
@@ -39,14 +33,10 @@ body {
     background: linear-gradient(45deg, transparent, rgba(0,255,255,0.08), transparent);
     animation: shine 3s infinite;
 }
-
-@keyframes shine {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+@keyframes shine { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
 
 .header h1 {
-    font-size: clamp(0.9em, 2.5vw, 1.4em);
+    font-size: clamp(0.85em, 2.5vw, 1.4em);
     color: #0ff;
     text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
     letter-spacing: 3px;
@@ -55,13 +45,12 @@ body {
     z-index: 1;
     font-weight: bold;
 }
-
 @keyframes glowPulse {
-    0%, 100% { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
-    50% { text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
+    0%,100% { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+    50%      { text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
 }
 
-/* Status */
+/* ===== STATUS ===== */
 .status {
     text-align: center;
     padding: 3px;
@@ -72,18 +61,19 @@ body {
     font-weight: bold;
     flex-shrink: 0;
 }
+.loading { color: #0ff; animation: blink 1s infinite; }
+@keyframes blink { 0%,50%,100%{opacity:1} 25%,75%{opacity:0.3} }
 
-.loading {
-    color: #0ff;
-    animation: blink 1s infinite;
+/* ===== CAMERA ===== */
+.left-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
 }
 
-@keyframes blink {
-    0%, 50%, 100% { opacity: 1; }
-    25%, 75% { opacity: 0.3; }
-}
-
-/* ===== CAMERA: chiếm hết không gian còn lại ===== */
 .camera-section-full {
     flex: 1;
     position: relative;
@@ -92,26 +82,21 @@ body {
     border-radius: 8px;
     overflow: hidden;
     background: #000;
-    /* Đảm bảo không bị co lại */
     min-height: 0;
+    min-width: 0;
 }
-
 #video {
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     object-fit: cover;
     background: #000;
 }
-
 #canvas {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
 }
 
-/* ===== CONTROLS: 1 hàng ngang gọn ở dưới ===== */
+/* ===== CONTROLS (portrait: hàng ngang dưới) ===== */
 .button-container {
     flex-shrink: 0;
     padding: 6px 8px;
@@ -120,6 +105,7 @@ body {
     border-radius: 8px;
     box-shadow: 0 0 12px #0ff;
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 10px;
@@ -127,6 +113,73 @@ body {
     overflow-x: auto;
 }
 
+/* ===== LANDSCAPE ===== */
+@media (orientation: landscape) {
+    body {
+        flex-direction: row;
+    }
+
+    /* Cột trái: header + camera */
+    .left-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .header {
+        padding: 3px 8px;
+    }
+    .header h1 {
+        font-size: clamp(0.65em, 1.6vw, 0.95em);
+        letter-spacing: 2px;
+    }
+
+    /* Ẩn status khi landscape */
+    .status { display: none; }
+
+    /* Controls: cột dọc bên phải */
+    .button-container {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 6px;
+        width: 105px;
+        flex-shrink: 0;
+        overflow-x: visible;
+        overflow-y: auto;
+        align-self: stretch;
+        border-radius: 8px;
+    }
+
+    /* Nút quét xoay dọc */
+    #startButton {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        padding: 18px 7px;
+        font-size: 0.8em;
+        letter-spacing: 1px;
+        white-space: nowrap;
+    }
+
+    #scanDuration { width: 75px; }
+
+    .scan-timer-horizontal {
+        width: 80px !important;
+        height: 14px !important;
+    }
+
+    #cameraSelect {
+        max-width: 90px;
+        font-size: 0.7em;
+        padding: 4px 5px;
+    }
+}
+
+/* ===== CONTROLS ITEMS ===== */
 .time-control {
     display: flex;
     flex-direction: column;
@@ -134,7 +187,6 @@ body {
     gap: 3px;
     flex-shrink: 0;
 }
-
 .time-control label {
     color: #0ff;
     font-size: 0.8em;
@@ -142,8 +194,7 @@ body {
     font-weight: bold;
     white-space: nowrap;
 }
-
-#durationValue, #zoomValue {
+#durationValue {
     color: #0f0;
     font-weight: bold;
     text-shadow: 0 0 8px #0f0;
@@ -158,21 +209,17 @@ body {
     cursor: pointer;
     box-shadow: 0 0 6px rgba(0,255,255,0.5);
 }
-
 #scanDuration::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 16px; height: 16px;
     background: #0ff;
     border: 2px solid #000;
     border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 0 8px #0ff;
 }
-
 #scanDuration::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
+    width: 16px; height: 16px;
     background: #0ff;
     border: 2px solid #000;
     border-radius: 50%;
@@ -197,18 +244,9 @@ body {
     flex-shrink: 0;
     white-space: nowrap;
 }
+#startButton:hover:not(:disabled) { box-shadow: 0 0 30px #0ff; transform: scale(1.05); }
+#startButton:disabled { opacity: 0.5; cursor: not-allowed; }
 
-#startButton:hover:not(:disabled) {
-    box-shadow: 0 0 30px #0ff;
-    transform: scale(1.05);
-}
-
-#startButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Thanh tiến trình quét */
 .scan-timer-horizontal {
     width: 120px;
     height: 22px;
@@ -220,7 +258,6 @@ body {
     flex-shrink: 0;
     box-shadow: 0 0 10px rgba(0,255,255,0.5);
 }
-
 .scan-timer-fill-horizontal {
     height: 100%;
     width: 0%;
@@ -228,24 +265,18 @@ body {
     transition: width 0.1s linear;
     animation: scanPulse 0.5s ease-in-out infinite;
 }
-
 @keyframes scanPulse {
-    0%, 100% { box-shadow: 0 0 15px #0ff; }
-    50% { box-shadow: 0 0 30px #0ff; }
+    0%,100% { box-shadow: 0 0 15px #0ff; }
+    50%      { box-shadow: 0 0 30px #0ff; }
 }
 
-/* Camera selector */
 .camera-selector {
     display: flex;
     align-items: center;
     gap: 5px;
     flex-shrink: 0;
 }
-
-.camera-selector label {
-    color: #0ff;
-    font-size: 1em;
-}
+.camera-selector label { color: #0ff; font-size: 1em; }
 
 #cameraSelect {
     padding: 5px 8px;
@@ -260,13 +291,9 @@ body {
     outline: none;
     max-width: 140px;
 }
+#cameraSelect option { background: #000; color: #0ff; }
 
-#cameraSelect option {
-    background: #000;
-    color: #0ff;
-}
-
-/* ===== KẾT QUẢ OVERLAY ===== */
+/* ===== RESULT OVERLAY ===== */
 .result-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -278,22 +305,14 @@ body {
     z-index: 1000;
     animation: fadeIn 0.3s ease-in-out;
 }
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
 .result-content {
     text-align: center;
     animation: zoomIn 0.4s ease-out;
     padding: 10px;
 }
-
-@keyframes zoomIn {
-    from { transform: scale(0.5); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
+@keyframes zoomIn { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
 
 .result-title {
     color: #0ff;
@@ -313,10 +332,9 @@ body {
     margin-bottom: 20px;
     animation: zoomInImage 0.5s ease-out;
 }
-
 @keyframes zoomInImage {
-    from { opacity: 0; transform: scale(0.7) rotate(-5deg); }
-    to { opacity: 1; transform: scale(1) rotate(0deg); }
+    from { opacity:0; transform:scale(0.7) rotate(-5deg); }
+    to   { opacity:1; transform:scale(1) rotate(0deg); }
 }
 
 .result-buttons {
@@ -329,41 +347,25 @@ body {
 .btn-celebrate {
     padding: 10px 28px;
     font-size: clamp(0.9em, 2vw, 1.2em);
-    font-weight: bold;
-    color: #000;
+    font-weight: bold; color: #000;
     background: linear-gradient(135deg, #0f0 0%, #00ff88 100%);
-    border: 3px solid #0f0;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: 0 0 20px #0f0;
+    border: 3px solid #0f0; border-radius: 10px;
+    cursor: pointer; box-shadow: 0 0 20px #0f0;
     transition: all 0.3s;
     font-family: 'Courier New', monospace;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    text-transform: uppercase; letter-spacing: 2px;
 }
-
-.btn-celebrate:hover {
-    box-shadow: 0 0 35px #0f0;
-    transform: scale(1.05);
-}
+.btn-celebrate:hover { box-shadow: 0 0 35px #0f0; transform: scale(1.05); }
 
 .btn-continue {
     padding: 10px 28px;
     font-size: clamp(0.9em, 2vw, 1.2em);
-    font-weight: bold;
-    color: #000;
+    font-weight: bold; color: #000;
     background: linear-gradient(135deg, #0ff 0%, #00aaff 100%);
-    border: 3px solid #0ff;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: 0 0 20px #0ff;
+    border: 3px solid #0ff; border-radius: 10px;
+    cursor: pointer; box-shadow: 0 0 20px #0ff;
     transition: all 0.3s;
     font-family: 'Courier New', monospace;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    text-transform: uppercase; letter-spacing: 2px;
 }
-
-.btn-continue:hover {
-    box-shadow: 0 0 35px #0ff;
-    transform: scale(1.05);
-}
+.btn-continue:hover { box-shadow: 0 0 35px #0ff; transform: scale(1.05); }

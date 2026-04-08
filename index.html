@@ -8,20 +8,22 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <h1>⚡ GỌI TÊN SIÊU CẤP AI ⚡</h1>
+
+    <!-- Cột trái: header + status + camera -->
+    <div class="left-col">
+        <div class="header">
+            <h1>⚡ GỌI TÊN SIÊU CẤP AI ⚡</h1>
+        </div>
+
+        <div class="status" id="status">Đang khởi động AI...</div>
+
+        <div class="camera-section-full">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
     </div>
 
-    <div class="status" id="status">Đang khởi động AI...</div>
-
-    <!-- Camera chiếm toàn bộ chiều ngang -->
-    <div class="camera-section-full">
-        <video id="video" autoplay muted playsinline></video>
-        <canvas id="canvas"></canvas>
-    </div>
-
-    <!-- Controls gọn ở dưới, 1 hàng ngang -->
+    <!-- Controls: hàng ngang (portrait) / cột dọc bên phải (landscape) -->
     <div class="button-container">
         <div class="time-control">
             <label for="scanDuration">⏱️ <span id="durationValue">3</span>s</label>
@@ -42,7 +44,7 @@
         </div>
     </div>
 
-    <!-- Màn hình kết quả -->
+    <!-- Kết quả -->
     <div class="result-overlay" id="resultOverlay">
         <div class="result-content">
             <div class="result-title">••• BIOMETRIC RESULT •••</div>
