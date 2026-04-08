@@ -489,7 +489,7 @@ const orientationHandler = async () => {
     if (!selectedDeviceId) return;
     // Đổi text nút theo orientation
     const isLandscape = window.innerWidth > window.innerHeight;
-    startButton.textContent = isLandscape ? 'BẮT ĐẦU' : 'BẮT ĐẦU QUÉT';
+    startButton.textContent = 'BẮT ĐẦU';
 
     setTimeout(async () => {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -515,7 +515,7 @@ async function init() {
     statusElement.textContent = '⚡ Đang khởi động...';
     // Set text nút theo orientation hiện tại
     const isLandscape = window.innerWidth > window.innerHeight;
-    startButton.textContent = isLandscape ? 'BẮT ĐẦU' : 'BẮT ĐẦU QUÉT';
+    startButton.textContent = 'BẮT ĐẦU';
     await listCameras();
     await startCamera(selectedDeviceId);
     await loadModels();

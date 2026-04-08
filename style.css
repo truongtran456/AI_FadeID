@@ -140,14 +140,15 @@ body {
     /* Ẩn status khi landscape */
     .status { display: none; }
 
-    /* Controls: cột dọc bên phải */
+    /* Controls: cột dọc bên phải - wrap content + padding 5px */
     .button-container {
         flex-direction: column;
         justify-content: center;
         align-items: center;
         gap: 14px;
-        padding: 10px 6px;
-        width: 100px;
+        padding: 5px;
+        width: fit-content;
+        min-width: 80px;
         flex-shrink: 0;
         overflow: hidden;
         align-self: stretch;
@@ -244,6 +245,10 @@ body {
     letter-spacing: 2px;
     flex-shrink: 0;
     white-space: nowrap;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 #startButton:hover:not(:disabled) { box-shadow: 0 0 30px #0ff; transform: scale(1.05); }
 #startButton:disabled { opacity: 0.5; cursor: not-allowed; }
