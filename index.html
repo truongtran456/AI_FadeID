@@ -9,6 +9,36 @@
 </head>
 <body>
 
+    <!-- ===== MÀN HÌNH NHẬP KEY ===== -->
+    <div id="keyOverlay" style="
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        background:radial-gradient(circle,#000d1a,#000);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        z-index:9999;font-family:'Courier New',monospace;
+    ">
+        <div style="text-align:center;padding:20px;max-width:340px;width:90%;">
+            <div style="font-size:2em;margin-bottom:8px;">⚡</div>
+            <h2 style="color:#0ff;text-shadow:0 0 15px #0ff;letter-spacing:3px;margin-bottom:6px;">GỌI TÊN AI</h2>
+            <p style="color:#888;font-size:0.85em;margin-bottom:24px;">Nhập key để sử dụng</p>
+
+            <input id="keyInput" type="text" placeholder="GT-DDMMYYYY-XXXXXXXX"
+                style="width:100%;padding:12px;font-size:1em;font-family:'Courier New',monospace;
+                background:#000;color:#0ff;border:2px solid #0ff;border-radius:8px;
+                text-align:center;letter-spacing:2px;outline:none;box-sizing:border-box;"
+                onkeydown="if(event.key==='Enter')checkKey()">
+
+            <button onclick="checkKey()" style="
+                margin-top:14px;width:100%;padding:12px;font-size:1em;font-weight:bold;
+                background:linear-gradient(135deg,#0ff,#00ffaa);color:#000;
+                border:none;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;
+                text-transform:uppercase;letter-spacing:2px;">
+                XÁC NHẬN
+            </button>
+
+            <div id="keyError" style="color:#f55;margin-top:12px;font-size:0.85em;min-height:20px;"></div>
+        </div>
+    </div>
+
     <!-- Cột trái: header + status + camera -->
     <div class="left-col">
         <div class="header">

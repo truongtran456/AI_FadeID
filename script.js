@@ -1,3 +1,75 @@
+// ===== KEY PROTECTION =====
+const SECRET = 'GOITEN_SECRET_2025_XYZ'; // Phải giống keygen.html
+
+async function sha256Short(msg) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+    return Array.from(new Uint8Array(buf))
+        .map(b => b.toString(16).padStart(2,'0'))
+        .join('')
+        .substring(0, 8)
+        .toUpperCase();
+}
+
+async function validateKey(key) {
+    // Format: GT-DDMMYYYY-XXXXXXXX
+    const parts = key.trim().toUpperCase().split('-');
+    if (parts.length !== 3 || parts[0] !== 'GT') return false;
+
+    const expireStr = parts[1]; // DDMMYYYY
+    const hashInput = parts[2];
+
+    if (expireStr.length !== 8) return false;
+
+    // Kiểm tra hash
+    const expectedHash = await sha256Short(SECRET + expireStr);
+    if (hashInput !== expectedHash) return false;
+
+    // Kiểm tra ngày hết hạn
+    const d = expireStr.substring(0,2);
+    const m = expireStr.substring(2,4);
+    const y = expireStr.substring(4,8);
+    const expireDate = new Date(`${y}-${m}-${d}`);
+    expireDate.setHours(23,59,59,999);
+    if (isNaN(expireDate.getTime())) return false;
+    if (new Date() > expireDate) return 'expired';
+
+    return true;
+}
+
+async function checkKey() {
+    const key = document.getElementById('keyInput').value.trim();
+    const errEl = document.getElementById('keyError');
+    errEl.textContent = 'Đang kiểm tra...';
+
+    const result = await validateKey(key);
+    if (result === true) {
+        localStorage.setItem('gt_key', key);
+        document.getElementById('keyOverlay').style.display = 'none';
+        errEl.textContent = '';
+    } else if (result === 'expired') {
+        errEl.textContent = '❌ Key đã hết hạn. Vui lòng mua key mới.';
+    } else {
+        errEl.textContent = '❌ Key không hợp lệ.';
+    }
+}
+
+async function checkSavedKey() {
+    const saved = localStorage.getItem('gt_key');
+    if (!saved) return; // Không có key → giữ overlay
+    const result = await validateKey(saved);
+    if (result === true) {
+        document.getElementById('keyOverlay').style.display = 'none';
+    } else {
+        localStorage.removeItem('gt_key');
+        if (result === 'expired') {
+            document.getElementById('keyError').textContent = '❌ Key đã hết hạn. Vui lòng nhập key mới.';
+        }
+    }
+}
+
+// Kiểm tra key đã lưu ngay khi load
+checkSavedKey();
+
 // ===== DOM ELEMENTS =====
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
