@@ -6,60 +6,42 @@
 <style>
   body { font-family: monospace; background: #111; color: #0ff; padding: 30px; }
   h2 { margin-bottom: 20px; }
-  label { display: block; margin: 10px 0 4px; color: #aff; }
-  input { padding: 8px 14px; font-size: 1em; border-radius: 6px; border: 2px solid #0ff; background: #000; color: #0ff; width: 220px; }
-  button { margin-top: 16px; padding: 10px 24px; font-size: 1em; border-radius: 6px; border: none; background: #0ff; color: #000; font-weight: bold; cursor: pointer; }
+  button { padding: 12px 28px; font-size: 1em; border-radius: 8px; border: none; background: #0ff; color: #000; font-weight: bold; cursor: pointer; }
   #output { margin-top: 24px; padding: 16px; border: 2px solid #0f0; border-radius: 8px; display: none; }
-  #key-text { font-size: 1.3em; color: #0f0; letter-spacing: 2px; }
-  #copy-btn { margin-top: 10px; padding: 6px 16px; background: #0f0; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  #key-text { font-size: 1.3em; color: #0f0; letter-spacing: 2px; word-break: break-all; }
+  #copy-btn { margin-top: 12px; padding: 8px 18px; background: #0f0; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95em; }
+  #copy-msg { color: #ff0; margin-top: 8px; display: none; }
 </style>
 </head>
 <body>
 <h2>🔑 Tạo Key cho khách hàng</h2>
-
-<label>Ngày hết hạn:</label>
-<input type="date" id="expire">
-
-<br>
-<button onclick="genKey()">Tạo Key</button>
+<button onclick="genKey()">Tạo Key mới</button>
 
 <div id="output">
-  <div>Key:</div>
+  <div style="margin-bottom:8px;color:#aff;">Key:</div>
   <div id="key-text"></div>
-  <button id="copy-btn" onclick="copyKey()">📋 Copy</button>
-  <div id="copy-msg" style="color:#ff0;margin-top:6px;display:none">Đã copy!</div>
+  <br>
+  <button id="copy-btn" onclick="copyKey()">📋 Copy Key</button>
+  <div id="copy-msg">✅ Đã copy!</div>
 </div>
 
 <script>
-// ⚠️ Giữ bí mật chuỗi này, không chia sẻ cho ai
-const SECRET = 'GOITEN_SECRET_2025_XYZ';
+const SECRET = 'GIAOVIENHIENDAI';
 
-async function sha256(msg) {
+async function sha256Short(msg) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
     return Array.from(new Uint8Array(buf))
         .map(b => b.toString(16).padStart(2,'0'))
         .join('')
-        .substring(0, 8)
+        .substring(0, 12)
         .toUpperCase();
 }
 
 async function genKey() {
-    const expireInput = document.getElementById('expire').value; // YYYY-MM-DD
-    if (!expireInput) { alert('Vui lòng chọn ngày hết hạn'); return; }
-
-    // Kiểm tra ngày hết hạn phải sau hôm nay
-    const expireDate = new Date(expireInput);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    if (expireDate <= today) { alert('Ngày hết hạn phải sau hôm nay'); return; }
-
-    // Format: DDMMYYYY để nhúng vào key
-    const [y, m, d] = expireInput.split('-');
-    const expireStr = `${d}${m}${y}`; // DDMMYYYY
-
-    // Hash để chống giả mạo
-    const hash = await sha256(SECRET + expireStr);
-    const key = `GT-${expireStr}-${hash}`;
+    // Mã ngẫu nhiên 6 ký tự → mỗi lần tạo ra key khác nhau
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const hash = await sha256Short(SECRET + rand);
+    const key = `GT-${rand}-${hash}`;
 
     document.getElementById('key-text').textContent = key;
     document.getElementById('output').style.display = 'block';
